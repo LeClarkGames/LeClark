@@ -11,10 +11,10 @@ from web_server import app
 from cogs.verification import VerificationButton
 from cogs.reporting import ReportTriggerView
 from cogs.submissions import (
-    SubmissionViewClosed, 
-    SubmissionViewOpen, 
-    SubmissionViewKothClosed, 
-    SubmissionViewKothOpen, 
+    SubmissionViewClosed,
+    SubmissionViewOpen,
+    SubmissionViewKothClosed,
+    SubmissionViewKothOpen,
     SubmissionViewKothTiebreaker
 )
 

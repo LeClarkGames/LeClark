@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild_name }} - Widgets</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            align-items: flex-start;
+            padding-top: 4rem;
+        }
+        .main-content {
+            min-height: 60vh;
+        }
+        .panel-container { display: flex; gap: 2rem; width: 100%; max-width: 1400px; }
+        .sidebar { flex: 0 0 200px; background: var(--primary-ui-color); border-radius: 4px; padding: 1rem; border: 1px solid var(--border-color); }
+        .sidebar a { display: block; padding: 1rem; text-decoration: none; color: var(--text-color); border-radius: 4px; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .sidebar a.active, .sidebar a:hover { background-color: var(--accent-color); }
+        .main-content { flex-grow: 1; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--primary-ui-color); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        .url-box { display: flex; }
+        .url-box input { width: 100%; font-family: 'Rajdhani', sans-serif; }
+        .url-box button { width: auto; font-family: 'Rajdhani', sans-serif; text-transform: uppercase; }
+        .copy-status { margin-top: 8px; font-size: 14px; color: #57F287; visibility: hidden; height: 16px; text-align: left;}
+    </style>
+</head>
+<body>
+    <div class="panel-container">
+        <aside class="sidebar">
+            <div class="header" style="padding-bottom: 1rem; margin-bottom: 1rem;">
+                <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon" style="width: 50px; height: 50px;">
+                <div><h1 style="font-size: 1.5rem;">{{ guild_name }}</h1></div>
+            </div>
+            <a href="{{ url_for('panel_home', guild_id=guild_id) }}">Dashboard</a>
+            <a href="{{ url_for('panel_statistics', guild_id=guild_id) }}">Statistics</a>
+            <a href="{{ url_for('panel_widgets', guild_id=guild_id) }}">Widgets</a>
+            <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a>
+            <a href="{{ url_for('panel_tiers', guild_id=guild_id) }}">Tiers</a>
+            <a href="{{ url_for('panel_giveaway', guild_id=guild_id) }}">Giveaway</a>
+        </aside>
+        <main class="main-content">
+            <div class="header-bar">
+                <h2>Stream Widgets</h2>
+                <div class="user-profile">
+                    <img src="{{ user_avatar_url }}" alt="User Avatar">
+                    <span>{{ user_name }}</span>
+                    <span style="font-size: 0.8rem; color: var(--secondary-text-color); font-weight: 700;">({{ access_level }})</span>
+                    <a href="{{ url_for('logout', guild_id=guild_id) }}" style="text-decoration: none; color: var(--secondary-text-color); margin-left: 1rem;">(Logout)</a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Setup Guide</h3>
+                <p style="text-align: left;">
+                    Use the URLs below to add real-time submission widgets to your stream via a "Browser Source" in OBS, Streamlabs, or other streaming software.
+                    <br><strong>Do not share these links with anyone!</strong> They are unique to this server and grant access to live data.
+                </p>
+            </div>
+
+            <div class="card" style="margin-top: 1.5rem; text-align: left;">
+                <h4 style="margin-top: 0;">🎵 Regular Submissions Widget</h4>
+                <div class="url-box">
+                    <input type="text" class="input" value="{{ regular_widget_url }}" id="regularUrl" readonly>
+                    <button class="button" onclick="copyToClipboard('regularUrl', 'regular-status')">Copy</button>
+                </div>
+                <p class="copy-status" id="regular-status">Copied!</p>
+
+                <h4 style="margin-top: 2rem;">⚔️ King of the Hill Widget</h4>
+                <div class="url-box">
+                    <input type="text" class="input" value="{{ koth_widget_url }}" id="kothUrl" readonly>
+                    <button class="button" onclick="copyToClipboard('kothUrl', 'koth-status')">Copy</button>
+                </div>
+                 <p class="copy-status" id="koth-status">Copied!</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function copyToClipboard(inputId, statusId) {
+            document.querySelectorAll('.copy-status').forEach(el => el.style.visibility = 'hidden');
+            const urlInput = document.getElementById(inputId);
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            const status = document.getElementById(statusId);
+            status.style.visibility = 'visible';
+            setTimeout(() => {
+                status.style.visibility = 'hidden';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

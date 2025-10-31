@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                {% if guild_icon_url %}
+                <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon">
+                {% endif %}
+                <div>
+                    <h1>{{ guild_name }}</h1>
+                    <p class="subtitle">{{ title }}</p>
+                </div>
+            </div>
+
+            <div class="leaderboard">
+                {% for user in users %}
+                <div class="entry rank-{{ loop.index }}">
+                    <div class="rank">
+                        {% if loop.index == 1 %}👑
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}
+                        {% endif %}
+                    </div>
+                    <img src="{{ user.avatar_url }}" alt="User Avatar" class="user-avatar">
+                    <div class="user-info">
+                            <p class="name">
+                                {% if user.emoji %}
+                                    <span class="emoji">{{ user.emoji }}</span>
+                                {% endif %}
+                                {{ user.name }}
+                            </p>
+                            <p class="details">{{ user.details }}</p>
+                      </div>
+                    <div class="score">{{ user.score }} {{ score_name }}</div>
+                </div>
+                {% else %}
+                <div class="entry">
+                    <p>The leaderboard is empty!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

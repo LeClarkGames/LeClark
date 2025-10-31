@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submissions Widget</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
+
+        :root {
+            --background: transparent;
+            --text-primary: #ffffff;
+            --text-secondary: #adb5bd;
+            --accent-color: #5865F2;
+            --card-bg: rgba(18, 18, 28, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- NEW: Text Gradient Animation --- */
+        @keyframes text-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .text-gradient {
+            background: linear-gradient(90deg, #5865F2, #a458f2, #58e6f2, #5865F2);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-flow 8s ease infinite;
+        }
+        
+        /* --- NEW: KOTH Leaderboard Rank Animation --- */
+        @keyframes koth-rank-flow {
+            0%   { color: #ffd700; } /* Gold */
+            25%  { color: #a458f2; } /* Purple */
+            50%  { color: #58e6f2; } /* Cyan */
+            75%  { color: #ffffff; } /* White */
+            100% { color: #ffd700; } /* Back to Gold */
+        }
+
+        body, html {
+            font-family: 'Poppins', sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .widget-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .widget-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .widget-card h2 {
+            margin: 0 0 15px 0;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .info-item .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .info-item .value {
+            font-size: 24px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #leaderboard-list li {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 16px;
+        }
+        #leaderboard-list li:not(:last-child) {
+             border-bottom: 1px solid var(--border-color);
+        }
+
+        .rank {
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-right: 15px;
+            width: 25px;
+        }
+        /* --- MODIFICATION: Apply animation to top 10 usernames --- */
+        .koth-top-10 .username {
+            animation: koth-rank-flow 10s linear infinite;
+        }
+
+        .username { font-weight: 600; }
+
+        .points {
+            margin-left: auto;
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        /* --- Notification --- */
+        #notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translate(-50%, 200%);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #notification.show { transform: translate(-50%, 0); }
+
+        #notification img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+        }
+        #notification strong { color: var(--accent-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="widget-container">
+        <div class="widget-card" id="regular-widget">
+            <h2>🎵 Regular Submissions</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">In Queue</div>
+                    <div class="value text-gradient" id="regular-queue">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Now Reviewing</div>
+                    <div class="value text-gradient" id="regular-reviewing">None</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget-card" id="koth-widget">
+            <h2>⚔️ King of the Hill</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">Current King</div>
+                    <div class="value text-gradient" id="koth-king">None</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Challengers</div>
+                    <div class="value text-gradient" id="koth-queue">0</div>
+                </div>
+            </div>
+            <h3 id="koth-leaderboard-title" style="margin-top: 20px; margin-bottom: 10px; font-size: 18px; color: var(--text-secondary);">Leaderboard</h3>
+            <ul id="leaderboard-list"></ul>
+        </div>
+    </div>
+
+    <div id="notification"></div>
+
+    <script>
+        // The JavaScript is updated to add the new class for KOTH leaderboard
+        const params = new URLSearchParams(window.location.search);
+        const token = "{{ token }}";
+        const type = params.get('type'); 
+        if (type === 'regular') {
+            document.getElementById('koth-widget').style.display = 'none';
+        } else if (type === 'koth') {
+            document.getElementById('regular-widget').style.display = 'none';
+        }
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${token}`;
+        let socket;
+        function connect() {
+            socket = new WebSocket(wsUrl);
+            socket.onopen = function() { console.log("WebSocket connection established."); };
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'full_update') {
+                    updateRegularWidget(data.regular_data);
+                    updateKOTHWidget(data.koth_data);
+                } else if (data.type === 'new_submission') {
+                    showNotification(data);
+                }
+            };
+            socket.onclose = function(e) {
+                console.log('Socket is closed. Reconnect will be attempted in 5 seconds.', e.reason);
+                setTimeout(function() { connect(); }, 5000);
+            };
+            socket.onerror = function(err) {
+                console.error('Socket encountered error: ', err.message, 'Closing socket');
+                socket.close();
+            };
+        }
+        function updateRegularWidget(data) {
+            document.getElementById('regular-queue').textContent = data.queue;
+            document.getElementById('regular-reviewing').textContent = data.reviewing || 'None';
+        }
+        function updateKOTHWidget(data) {
+            document.getElementById('koth-king').textContent = data.king || 'None';
+            document.getElementById('koth-queue').textContent = data.queue;
+            // NEW LINE: This updates the title dynamically
+            document.getElementById('koth-leaderboard-title').textContent = data.leaderboard_title || 'Leaderboard';
+
+            const leaderboardList = document.getElementById('leaderboard-list');
+            leaderboardList.innerHTML = '';
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                data.leaderboard.forEach((user, index) => {
+                    const li = document.createElement('li');
+                    if (index < 10) {
+                        li.classList.add('koth-top-10');
+                    }
+                    li.innerHTML = `<span class="rank">${index + 1}.</span><span class="username">${user.name}</span><span class="points">${user.points} pts</span>`;
+                    leaderboardList.appendChild(li);
+                });
+            } else {
+                leaderboardList.innerHTML = '<li style="color: var(--text-secondary);">No one on the leaderboard yet.</li>';
+            }
+        }
+        function showNotification(data) {
+            const notification = document.getElementById('notification');
+            notification.innerHTML = `<img src="${data.avatar_url}" alt="avatar"> <span><strong>${data.username}</strong> just submitted a track!</span>`;
+            notification.classList.add('show');
+            setTimeout(() => { notification.classList.remove('show'); }, 5000);
+        }
+        if (token) { connect(); } else { document.body.innerHTML = "<h1>Error: Missing authentication token.</h1>"; }
+    </script>
+</body>
+</html>

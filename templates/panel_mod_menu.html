@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild_name }} - Mod Menu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { align-items: flex-start; padding-top: 4rem; }
+        .main-content { min-height: 60vh; }
+        .panel-container { display: flex; gap: 2rem; width: 100%; max-width: 1400px; }
+        .sidebar { flex: 0 0 200px; background: var(--primary-ui-color); border-radius: 4px; padding: 1rem; border: 1px solid var(--border-color); }
+        .sidebar a { display: block; padding: 1rem; text-decoration: none; color: var(--text-color); border-radius: 4px; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .sidebar a.active, .sidebar a:hover { background-color: var(--accent-color); }
+        .main-content { flex-grow: 1; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--primary-ui-color); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .form-group { display: flex; flex-direction: column; text-align: left; }
+        .form-group label { margin-bottom: 0.5rem; font-weight: 700; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; }
+        #response-message { margin-top: 1rem; text-align: center; font-weight: 700; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: var(--primary-ui-color); margin: 15% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 500px; border-radius: 4px; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .audit-log-entry { padding: 8px 0; border-bottom: 1px solid #2a2a33; }
+        .audit-log-entry:last-child { border-bottom: none; }
+        .staff-list { list-style: none; padding: 0; text-align: left; }
+        .staff-list li { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+        .staff-list img { width: 30px; height: 30px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div class="panel-container">
+        <aside class="sidebar">
+            <div class="header" style="padding-bottom: 1rem; margin-bottom: 1rem;">
+                <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon" style="width: 50px; height: 50px;">
+                <div><h1 style="font-size: 1.5rem;">{{ guild_name }}</h1></div>
+            </div>
+            <a href="{{ url_for('panel_home', guild_id=guild_id) }}">Dashboard</a>
+            <a href="{{ url_for('panel_statistics', guild_id=guild_id) }}">Statistics</a>
+            <a href="{{ url_for('panel_widgets', guild_id=guild_id) }}">Widgets</a>
+            <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a>
+            <a href="{{ url_for('panel_tiers', guild_id=guild_id) }}">Tiers</a>
+            <a href="{{ url_for('panel_giveaway', guild_id=guild_id) }}">Giveaway</a>
+        </aside>
+        <main class="main-content">
+            <div class="header-bar">
+                <h2>Moderation Menu</h2>
+                <div class="user-profile">
+                    <img src="{{ user_avatar_url }}" alt="User Avatar">
+                    <span>{{ user_name }}</span>
+                    <span style="font-size: 0.8rem; color: var(--secondary-text-color); font-weight: 700;">({{ access_level }})</span>
+                    <a href="{{ url_for('logout', guild_id=guild_id) }}" style="text-decoration: none; color: var(--secondary-text-color); margin-left: 1rem;">(Logout)</a>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="card">
+                    <h3>Moderate User</h3>
+                    <div class="form-group">
+                        <label for="target_id">User ID or Mention</label>
+                        <input type="text" id="target_id" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mod_action">Action</label>
+                        <select id="mod_action" class="input">
+                            <option value="warn">Warn</option>
+                            <option value="timeout">Timeout</option>
+                            <option value="kick">Kick</option>
+                            <option value="ban">Ban</option>
+                        </select>
+                    </div>
+                    <button id="take-action-btn" class="button" style="margin-top: 1.5rem;">Take Action</button>
+                    <div id="mod-response"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Setup Panels</h3>
+                    <p class="subtitle" style="margin-bottom: 1.5rem;">Run the setup commands to post the interactive panels in their configured channels.</p>
+                    <button class="button setup-btn" data-setup="verification">Setup Verification</button>
+                    <button class="button setup-btn" style="margin-top: 1rem;" data-setup="submission">Setup Submissions</button>
+                    <button class="button setup-btn" style="margin-top: 1rem;" data-setup="report">Setup Reporting</button>
+                    <div id="setup-response"></div>
+                </div>
+
+                <div class="card" style="grid-column: 1 / -1;">
+                     <h3>Send Message via Bot</h3>
+                     <form id="send-message-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="channel_id">Channel ID</label>
+                                <input type="text" id="channel_id" name="channel_id" class="input" required>
+                            </div>
+                             <div class="form-group">
+                                <label for="is_embed">Message Type</label>
+                                <select id="is_embed" name="is_embed" class="input">
+                                    <option value="false">Regular Message</option>
+                                    <option value="true">Embed Message</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                             <label for="message_content">Content (For Embed, use Title|Description)</label>
+                             <textarea id="message_content" name="message_content" class="input" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="button" style="margin-top: 1.5rem;">Send Message</button>
+                     </form>
+                     <div id="send-response"></div>
+                </div>
+
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h3>Server Audit Log</h3>
+                    <div id="audit-log-content" style="text-align: left; max-height: 400px; overflow-y: auto;">
+                        <p class="subtitle">Click the button to load the latest server events.</p>
+                    </div>
+                    <button id="load-audit-log" class="button" style="margin-top: 1rem;">Load Audit Log</button>
+                </div>
+                
+                {% if access_level == 'Admin' %}
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h3>Staff Management</h3>
+                    <p class="subtitle">Assigns the first configured Admin/Mod role from the bot's settings.</p>
+                    <div class="form-grid" style="margin-top: 1.5rem;">
+                        <div>
+                            <h4>Current Staff</h4>
+                            <ul class="staff-list">
+                                {% for member in admin_members %}
+                                <li><img src="{{ member.avatar_url }}"><span>{{ member.name }} (Admin)</span></li>
+                                {% endfor %}
+                                {% for member in mod_members %}
+                                <li><img src="{{ member.avatar_url }}"><span>{{ member.name }} (Mod)</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4>Manage Staff Member</h4>
+                            <div class="form-group">
+                                <label for="staff_target_id">User ID</label>
+                                <input type="text" id="staff_target_id" class="input">
+                            </div>
+                            <div class="form-group">
+                                <label for="staff_role_type">Role Type</label>
+                                <select id="staff_role_type" class="input">
+                                    <option value="mod">Moderator</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="staff-actions">
+                                <button id="add-staff-btn" class="button">Add</button>
+                                <button id="remove-staff-btn" class="button" style="background-color: var(--accent-color);">Remove</button>
+                            </div>
+                            <div id="staff-response"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <div id="mod-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3 id="modal-title">Action Details</h3>
+        <form id="mod-modal-form">
+            <div id="duration-group" class="form-group" style="display: none;">
+                <label for="duration">Timeout Duration (minutes)</label>
+                <input type="number" id="duration" name="duration" class="input" value="10">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="reason">Reason</label>
+                <textarea id="reason" name="reason" class="input" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="button" style="margin-top: 1.5rem;">Confirm Action</button>
+        </form>
+      </div>
+    </div>
+    
+    <script>
+        const guildId = '{{ guild_id }}';
+        function showResponse(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.style.color = isError ? 'var(--accent-color)' : '#57F287';
+        }
+        const modModal = document.getElementById('mod-modal');
+        const takeActionBtn = document.getElementById('take-action-btn');
+        const closeBtn = document.querySelector('.close-button');
+        // --- NEW STAFF MANAGEMENT SCRIPT ---
+        const addStaffBtn = document.getElementById('add-staff-btn');
+        const removeStaffBtn = document.getElementById('remove-staff-btn');
+
+        const handleStaffAction = async (action) => {
+            const formData = new FormData();
+            formData.append('target_id', document.getElementById('staff_target_id').value);
+            formData.append('role_type', document.getElementById('staff_role_type').value);
+            formData.append('role_action', action);
+
+            const response = await fetch(`/api/v1/actions/manage-staff/${guildId}`, { method: 'POST', body: formData });
+            const result = await response.json();
+            showResponse('staff-response', result.message || result.error, !response.ok);
+            if(response.ok) {
+                // Optionally, refresh the page to see the updated staff list
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        };
+
+        if (addStaffBtn && removeStaffBtn) {
+            addStaffBtn.addEventListener('click', () => handleStaffAction('add'));
+            removeStaffBtn.addEventListener('click', () => handleStaffAction('remove'));
+        }
+
+        takeActionBtn.onclick = () => {
+            const action = document.getElementById('mod_action').value;
+            document.getElementById('modal-title').textContent = `${action.charAt(0).toUpperCase() + action.slice(1)} User`;
+            document.getElementById('duration-group').style.display = (action === 'timeout') ? 'block' : 'none';
+            modModal.style.display = 'block';
+        };
+        closeBtn.onclick = () => modModal.style.display = 'none';
+        window.onclick = (event) => { if (event.target == modModal) modModal.style.display = 'none'; };
+        document.getElementById('mod-modal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('target_id', document.getElementById('target_id').value);
+            formData.append('mod_action', document.getElementById('mod_action').value);
+            formData.append('duration', document.getElementById('duration').value);
+            formData.append('reason', document.getElementById('reason').value);
+            const response = await fetch(`/api/v1/actions/moderate/${guildId}`, { method: 'POST', body: formData });
+            const result = await response.json();
+            showResponse('mod-response', result.message || result.error, !response.ok);
+            if (response.ok) modModal.style.display = 'none';
+        });
+        document.querySelectorAll('.setup-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const setupType = button.dataset.setup;
+                const formData = new FormData();
+                formData.append('setup_type', setupType);
+                const response = await fetch(`/api/v1/actions/run-setup/${guildId}`, { method: 'POST', body: formData });
+                const result = await response.json();
+                showResponse('setup-response', result.message || result.error, !response.ok);
+            });
+        });
+        document.getElementById('send-message-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch(`/api/v1/actions/send-message/${guildId}`, { method: 'POST', body: formData });
+            const result = await response.json();
+            showResponse('send-response', result.message || result.error, !response.ok);
+        });
+        document.getElementById('load-audit-log').addEventListener('click', async () => {
+            const contentDiv = document.getElementById('audit-log-content');
+            contentDiv.innerHTML = '<p>Loading logs...</p>';
+            const response = await fetch(`/api/v1/audit-log/${guildId}`);
+            if (response.ok) {
+                const logs = await response.json();
+                let html = '';
+                logs.forEach(log => {
+                    html += `<div class="audit-log-entry"><strong>${log.user}</strong> ${log.action} <strong>${log.target}</strong><br><small style="color: var(--secondary-text-color);">${log.reason}</small></div>`;
+                });
+                contentDiv.innerHTML = html;
+            } else {
+                contentDiv.innerHTML = '<p style="color: var(--accent-color);">Failed to load audit logs.</p>';
+            }
+        });
+    </script>
+</body>
+</html>

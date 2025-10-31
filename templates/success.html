@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Success!</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 520px;">
+        <div class="card">
+            <img src="{{ bot_avatar_url }}" alt="Bot Avatar" class="guild-icon" style="width: 100px; height: 100px; margin: 0 auto 20px auto;">
+            <h1 style="color: #57F287;">Success!</h1>
+            <p>Your identity as <strong>{{ account_name }}</strong> has been confirmed.</p>
+            <p>You can now close this window and return to <strong>{{ server_name }}</strong>.</p>
+        </div>
+    </div>
+</body>
+</html>

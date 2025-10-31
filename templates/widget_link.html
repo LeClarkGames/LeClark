@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Widget Links</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Add a little extra style for this specific page */
+        .url-box { display: flex; }
+        input {
+            width: 100%; padding: 10px; border-radius: 5px 0 0 5px; border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(0, 0, 0, 0.2); color: #fff; font-size: 16px; font-family: 'Poppins', sans-serif;
+        }
+        button {
+            padding: 10px 20px; border: none; background-color: #5865F2; color: white; border-radius: 0 5px 5px 0;
+            cursor: pointer; font-size: 16px; font-weight: 700; transition: background-color 0.2s; width: auto;
+        }
+        button:hover { background-color: #4a54c4; }
+        .copy-status { margin-top: 8px; font-size: 14px; color: #57F287; visibility: hidden; height: 16px; text-align: left;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Your Stream Widget URLs</h1>
+            <p>Copy the URL for the widget you want to display and add it as a "Browser Source" in OBS or Streamlabs.</p>
+            <p><strong>Do not share these links with anyone!</strong> They are unique to your server.</p>
+            
+            <div style="margin-top: 30px; text-align: left;">
+                <h3>🎵 Regular Submissions Widget</h3>
+                <div class="url-box">
+                    <input type="text" value="{{ widget_url_base }}?type=regular" id="regularUrl" readonly>
+                    <button onclick="copyToClipboard('regularUrl', 'regular-status')">Copy</button>
+                </div>
+                <p class="copy-status" id="regular-status">Copied!</p>
+            </div>
+
+            <div style="margin-top: 30px; text-align: left;">
+                <h3>⚔️ King of the Hill Widget</h3>
+                <div class="url-box">
+                    <input type="text" value="{{ widget_url_base }}?type=koth" id="kothUrl" readonly>
+                    <button onclick="copyToClipboard('kothUrl', 'koth-status')">Copy</button>
+                </div>
+                 <p class="copy-status" id="koth-status">Copied!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(inputId, statusId) {
+            document.querySelectorAll('.copy-status').forEach(el => el.style.visibility = 'hidden');
+            const urlInput = document.getElementById(inputId);
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            const status = document.getElementById(statusId);
+            status.style.visibility = 'visible';
+            setTimeout(() => {
+                status.style.visibility = 'hidden';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

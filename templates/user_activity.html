@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Activity for {{ user.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .actions-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 650px;">
+        <div class="card">
+            <div class="header">
+                <img src="{{ user.avatar_url }}" alt="User Avatar" class="guild-icon">
+                <div>
+                    <h1>Activity Report</h1>
+                    <p class="subtitle">{{ user.name }}</p>
+                </div>
+            </div>
+            
+            <h2 style="margin-bottom: 1.5rem;">Recommendation: Tier {{ request.next_tier }}</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Message Count</div>
+                    <div class="stat-value">{{ activity.message_count }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Voice Hours</div>
+                    <div class="stat-value">{{ "%.2f"|format(activity.voice_seconds / 3600) }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Messages Required</div>
+                    <div class="stat-value">{{ requirements.messages_req }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Voice Hours Required</div>
+                    <div class="stat-value">{{ requirements.voice_hours_req }}</div>
+                </div>
+            </div>
+
+            <div class="actions-container">
+                <a href="{{ url_for('panel_tiers', guild_id=guild_id) }}" class="button" style="background-color: transparent;">Back to Tiers List</a>
+                <form action="/approve_tier_up" method="post" style="width: 100%;">
+                    <input type="hidden" name="token" value="{{ request.token }}">
+                    <input type="hidden" name="approver_name" value="{{ approver_name }}">
+                    <button type="submit" class="button approve-btn">Approve Upgrade to Tier {{ request.next_tier }}</button>
+                </form>
+            </div>
+            </div>
+    </div>
+</body>
+</html>

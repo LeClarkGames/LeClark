@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Panel Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 520px;">
+        <div class="card">
+            {% if guild_icon_url %}
+            <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon">
+            {% endif %}
+            <h1>{{ guild_name }}</h1>
+            <p class="subtitle">Staff Control Panel</p>
+            <a href="{{ url_for('login') }}" class="button" style="margin-top: 1.5rem; background-color: #5865F2; border: none;">Login with Discord</a>
+        </div>
+    </div>
+</body>
+</html>

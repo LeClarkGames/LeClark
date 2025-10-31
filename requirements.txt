@@ -1,0 +1,7 @@
+discord.py
+aiosqlite
+python-dotenv
+quart
+httpx
+aiosmtplib
+google-api-python-client

@@ -51,11 +51,10 @@ class MyBot(commands.Bot):
         log.info("Registered persistent UI views.")
 
         cogs_to_load = [
-            "cogs.settings", "cogs.events", "cogs.moderation",
-            "cogs.verification", "cogs.reaction_roles", "cogs.reporting",
-            "cogs.temp_vc", "cogs.submissions", "cogs.tasks", "cogs.ranking",
-            "cogs.shop", "cogs.utility", "cogs.inventory", "cogs.customize",
-            "cogs.tier_system", "cogs.panel_handler", "cogs.giveaway"
+            "cogs.settings", "cogs.moderation",
+            "cogs.verification", "cogs.reporting",
+            "cogs.temp_vc", "cogs.submissions", "cogs.tasks",
+            "cogs.ranking", "cogs.utility", "cogs.panel_handler"
         ]
         for cog in cogs_to_load:
             try:

@@ -26,14 +26,11 @@ app.secret_key = os.getenv("QUART_SECRET_KEY")
 
 user_cache = {}
 cache_lock = asyncio.Lock()
-CACHE_DURATION_SECONDS = 300 # Cache users for 5 minutes
+CACHE_DURATION_SECONDS = 300
 
-# --- Caching Setup ---
 web_cache = {}
-CACHE_EXPIRATION = 120  # 2 minutes
-# ---------------------
+CACHE_EXPIRATION = 120
 
-# --- CONFIGURATION & GLOBALS ---
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
@@ -41,7 +38,6 @@ YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID")
 YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET")
 DB_FILE = "bot_database.db"
 
-# --- NEW: Discord OAuth2 Credentials ---
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = f"{APP_BASE_URL}/callback"
@@ -65,7 +61,6 @@ def login_required(f):
         return await f(guild_id, *args, **kwargs)
     return decorated_function
 
-# --- WebSocket Connection Manager ---
 class WebSocketManager:
     def __init__(self):
         self.active_connections: dict[int, set] = defaultdict(set)
@@ -137,31 +132,10 @@ async def get_full_widget_data(guild_id: int) -> dict:
 
     status = await database.get_setting(guild_id, 'submission_status')
     regular_queue_count = await database.get_submission_queue_count(guild_id, 'regular')
-    koth_queue_count = await database.get_submission_queue_count(guild_id, 'koth')
     reviewing_user_id = await database.get_current_review(guild_id, 'regular')
-    king_id = await database.get_setting(guild_id, 'koth_king_id')
-
-    raw_koth_lb_data = []
-    koth_leaderboard_title = "Leaderboard (All-Time)"
-    
-    if status == 'koth_open':
-        cog = bot.get_cog("Submissions")
-        if cog:
-            session_stats = cog.current_koth_session.get(guild_id, {})
-            if session_stats:
-                koth_leaderboard_title = "Leaderboard (Current Battle)"
-                sorted_session = sorted(session_stats.items(), key=lambda item: item[1]['points'], reverse=True)
-                raw_koth_lb_data = [(uid, stats['points']) for uid, stats in sorted_session]
-
-    if not raw_koth_lb_data:
-        all_time_data = await database.get_koth_leaderboard(guild_id)
-        raw_koth_lb_data = [(uid, pts) for uid, pts, _, _, _ in all_time_data]
 
     user_ids_to_fetch = set()
     if reviewing_user_id: user_ids_to_fetch.add(reviewing_user_id)
-    if king_id: user_ids_to_fetch.add(king_id)
-    for user_id, _ in raw_koth_lb_data[:5]:
-        user_ids_to_fetch.add(user_id)
 
     user_fetch_tasks = [fetch_user_data(uid) for uid in user_ids_to_fetch]
     fetched_users_list = await asyncio.gather(*user_fetch_tasks)
@@ -170,24 +144,12 @@ async def get_full_widget_data(guild_id: int) -> dict:
     default_user = {"name": "None", "avatar_url": ""}
 
     reviewing_user_name = user_data_map.get(reviewing_user_id, default_user)['name']
-    king_name = user_data_map.get(king_id, default_user)['name']
-    
-    koth_leaderboard = [
-        {"name": user_data_map.get(uid, default_user)['name'], "points": pts}
-        for uid, pts in raw_koth_lb_data[:5]
-    ]
 
     return {
         "type": "full_update",
         "regular_data": {
             "queue": regular_queue_count,
             "reviewing": reviewing_user_name
-        },
-        "koth_data": {
-            "queue": koth_queue_count,
-            "king": king_name,
-            "leaderboard": koth_leaderboard,
-            "leaderboard_title": koth_leaderboard_title
         }
     }
 
@@ -233,12 +195,6 @@ async def panel_home(guild_id: int):
         user_data = await fetch_user_data(user_id_xp)
         xp_leaderboard_users.append({"name": user_data['name'], "score": xp})
 
-    koth_leaderboard_raw = await database.get_koth_leaderboard(guild.id)
-    koth_leaderboard_users = []
-    for user_id_koth, points, w, l, s in koth_leaderboard_raw[:5]:
-        user_data = await fetch_user_data(user_id_koth)
-        koth_leaderboard_users.append({"name": user_data['name'], "score": points})
-
     last_member_joined = sorted(guild.members, key=lambda m: m.joined_at, reverse=True)[0]
     online_members = sum(1 for m in guild.members if m.status != discord.Status.offline)
     
@@ -250,7 +206,6 @@ async def panel_home(guild_id: int):
         "panel_dashboard.html",
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
-        xp_leaderboard=xp_leaderboard_users, koth_leaderboard=koth_leaderboard_users,
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
         access_level=access_level
     )
@@ -353,105 +308,6 @@ async def panel_mod_menu(guild_id: int):
         admin_members=admin_members,
         mod_members=mod_members
     )
-
-@app.route('/panel/<int:guild_id>/tiers')
-@login_required
-async def panel_tiers(guild_id: int):
-    """Renders the tier management page."""
-    guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
-
-    pending_requests_raw = await database.get_all_pending_tier_requests(guild_id)
-    
-    pending_requests = []
-    for req in pending_requests_raw:
-        user_data = await fetch_user_data(req['user_id'])
-        pending_requests.append({
-            'user_id': req['user_id'],
-            'user_name': user_data['name'],
-            'user_avatar_url': user_data['avatar_url'],
-            'next_tier': req['next_tier'],
-            'token': req['token']
-        })
-
-    return await render_template(
-        "panel_tiers.html",
-        guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
-        user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
-        access_level=access_level,
-        requests=pending_requests
-    )
-
-@app.route('/panel/<int:guild_id>/giveaway')
-@login_required
-async def panel_giveaway(guild_id: int):
-    """Renders the giveaway management page."""
-    guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
-
-    all_giveaways = await database.get_all_giveaways(guild_id)
-    
-    for giveaway in all_giveaways:
-        if giveaway['is_active']:
-            giveaway['entrant_count'] = len(await database.get_giveaway_entrants(guild_id, giveaway['id']))
-        else:
-            giveaway['entrant_count'] = 0
-
-    return await render_template(
-        "panel_giveaway.html",
-        guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
-        user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
-        access_level=access_level,
-        giveaways=all_giveaways
-    )
-
-@app.route('/panel/<int:guild_id>/giveaway/create')
-@login_required
-async def panel_giveaway_create(guild_id: int):
-    """Renders the giveaway creation page."""
-    guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
-
-    text_channels = [channel for channel in guild.text_channels if channel.permissions_for(guild.me).send_messages]
-
-    return await render_template(
-        "panel_giveaway_create.html",
-        guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
-        user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
-        access_level=access_level,
-        channels=text_channels
-    )
-
-@app.route('/api/v1/actions/giveaway/create/<int:guild_id>', methods=['POST'])
-@login_required
-async def api_create_giveaway(guild_id: int):
-    """API endpoint to queue a giveaway creation action."""
-    form = await request.form
-    task = {
-        "action": "create_giveaway",
-        "guild_id": guild_id,
-        "moderator_id": int(session.get('user_id')),
-        "name": form.get('name'),
-        "description": form.get('description'),
-        "channel_id": form.get('channel_id'),
-        "end_time": form.get('end_time'),
-        "youtube_url": form.get('youtube_url'),
-        "submission_req": form.get('submission_req') == 'true'
-    }
-
-    if not all(k in task for k in ['name', 'description', 'channel_id', 'end_time']):
-        return jsonify({"error": "All fields are required."}), 400
-
-    try:
-        app.bot_instance.action_queue.put_nowait(task)
-        return jsonify({"message": "Giveaway has been successfully queued."}), 200
-    except Exception as e:
-        log.error(f"Failed to queue giveaway creation: {e}")
-        return jsonify({"error": "Failed to queue the action."}), 500
-
 
 @app.route('/api/v1/actions/moderate/<int:guild_id>', methods=['POST'])
 @login_required
@@ -604,29 +460,6 @@ async def xp_leaderboard(guild_id: int):
     }
     
     return rendered_template
-    # --- FIX ENDS HERE ---
-
-@app.route('/koth/<int:guild_id>')
-async def koth_leaderboard(guild_id: int):
-    bot = app.bot_instance; guild = bot.get_guild(guild_id)
-    if not guild: return await render_template("leaderboard.html", title="Error", guild_name="Unknown Server", users=[])
-    raw_leaderboard = await database.get_koth_leaderboard(guild_id)
-    user_ids = [user_id for user_id, points, w, l, s in raw_leaderboard]
-    cosmetics_task = database.get_all_user_cosmetics(guild_id, user_ids)
-    user_data_task = asyncio.gather(*[fetch_user_data(uid) for uid in user_ids])
-    cosmetics, fetched_users = await asyncio.gather(cosmetics_task, user_data_task)
-    
-    users = []
-    for i, (user_id, points, wins, losses, streak) in enumerate(raw_leaderboard):
-        user_info = fetched_users[i]
-        users.append({
-            "name": user_info['name'],
-            "avatar_url": user_info['avatar_url'],
-            "score": points,
-            "details": f"W/L: {wins}/{losses} | Streak: {streak}",
-            "emoji": cosmetics.get(user_id)
-        })
-    return await render_template("leaderboard.html", title=f"KOTH Leaderboard - {guild.name}", guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None, users=users, score_name="Points")
 
 @app.route('/widget/<int:guild_id>')
 async def widget_link_page(guild_id: int):
@@ -712,53 +545,6 @@ async def callback_youtube():
         return await render_template("success.html", account_name=account_name, **template_data)
     except Exception as e:
         print(f"Database error during YouTube callback: {e}"); return "An internal server error occurred.", 500
-    
-@app.route('/user_activity/<int:guild_id>/<int:user_id>')
-async def user_activity_page(guild_id: int, user_id: int):
-    token = request.args.get('token')
-    approver_name = "Staff Member"
-    
-    request_data = await database.get_tier_request_by_token(token)
-    if not request_data or request_data['guild_id'] != guild_id or request_data['user_id'] != user_id:
-        return "<h1>Invalid or expired link.</h1>", 403
-
-    user_data = await fetch_user_data(user_id)
-    activity_data = await database.get_user_activity(guild_id, user_id)
-    requirements = (await database.get_all_tier_requirements(guild_id)).get(request_data['next_tier'], {})
-
-    return await render_template(
-        "user_activity.html",
-        guild_id=guild_id,
-        user=user_data,
-        activity=activity_data,
-        request=request_data,
-        requirements=requirements,
-        approver_name=approver_name
-    )
-
-@app.route('/approve_tier_up', methods=['POST'])
-async def approve_tier_up():
-    form = await request.form
-    token = form.get('token')
-    approver_name = form.get('approver_name')
-
-    request_data = await database.get_tier_request_by_token(token)
-    if not request_data:
-        return "<h1>Invalid or expired request.</h1>", 403
-
-    approval_details = {
-        "guild_id": request_data['guild_id'],
-        "user_id": request_data['user_id'],
-        "new_tier": request_data['next_tier'],
-        "message_id": request_data['message_id'],
-        "approver_name": approver_name
-    }
-    app.bot_instance.tier_approval_queue.put_nowait(approval_details)
-
-    await database.delete_tier_request(token)
-
-    template_data = await get_verification_data(token)
-    return await render_template("success.html", account_name=f"User has been approved for Tier {request_data['next_tier']}", **template_data)
 
 @app.route('/dashboard/<int:guild_id>')
 async def activity_dashboard(guild_id: int):

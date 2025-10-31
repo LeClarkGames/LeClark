@@ -37,8 +37,6 @@
             <a href="{{ url_for('panel_statistics', guild_id=guild_id) }}">Statistics</a>
             <a href="{{ url_for('panel_widgets', guild_id=guild_id) }}">Widgets</a>
             <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a>
-            <a href="{{ url_for('panel_tiers', guild_id=guild_id) }}">Tiers</a>
-            <a href="{{ url_for('panel_giveaway', guild_id=guild_id) }}">Giveaway</a>
         </aside>
         <main class="main-content">
             <div class="header-bar">
@@ -62,18 +60,6 @@
                         {% endfor %}
                     </ul>
                     <a href="{{ url_for('xp_leaderboard', guild_id=guild_id) }}" target="_blank" class="button" style="margin-top: 1rem;">Open in New Page</a>
-                </div>
-
-                <div class="card leaderboard-card">
-                    <h3>KOTH Leaderboard</h3>
-                    <ul class="stat-list">
-                        {% for user in koth_leaderboard %}
-                        <li>{{ user.name }}<span>{{ user.score }} Points</span></li>
-                        {% else %}
-                        <li>No KOTH data yet.</li>
-                        {% endfor %}
-                    </ul>
-                    <a href="{{ url_for('koth_leaderboard', guild_id=guild_id) }}" target="_blank" class="button" style="margin-top: 1rem;">Open in New Page</a>
                 </div>
 
                 <div class="stats-column">

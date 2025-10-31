@@ -72,7 +72,7 @@ class RankingCog(commands.Cog, name="Ranking"):
 
     def cog_unload(self):
         self.voice_xp_loop.cancel()
-        self.cleanup_buffs_loop.cancel() # Cancel the new cleanup task
+        self.cleanup_buffs_loop.cancel()
 
     @tasks.loop(hours=1)
     async def cleanup_buffs_loop(self):
@@ -86,10 +86,6 @@ class RankingCog(commands.Cog, name="Ranking"):
 
     async def _handle_xp_gain(self, guild: discord.Guild, member: discord.Member, xp_to_add: int):
         """A central function to handle adding XP and checking for rank rewards."""
-        # Check for an active XP boost
-        if await database.get_user_buff(guild.id, member.id, "xp_boost"):
-            xp_to_add *= 2
-
         old_xp = await database.get_user_xp(guild.id, member.id)
         old_rank = get_rank_from_xp(old_xp)
         
@@ -213,40 +209,6 @@ class RankingCog(commands.Cog, name="Ranking"):
         view.add_item(discord.ui.Button(label="View Full Leaderboard", url=link, emoji="🌐"))
         
         await interaction.followup.send(embed=embed, view=view)
-
-    @app_commands.command(name="kothleaderboard", description="Provides a link to the full KOTH leaderboard.")
-    async def kothleaderboard(self, interaction: discord.Interaction):
-        base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-        link = f"{base_url}/koth/{interaction.guild.id}"
-        
-        embed = discord.Embed(
-            title="⚔️ King of the Hill Leaderboard",
-            description="Click the button below to view the full, live KOTH leaderboard with detailed stats for all participants.",
-            color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"]
-        )
-        
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="View KOTH Leaderboard", url=link, emoji="🌐"))
-        
-        await interaction.response.send_message(embed=embed, view=view)
-        
-    @app_commands.command(name="myemoji", description="Set or change your leaderboard emoji.")
-    @app_commands.describe(emoji="The emoji you want to display next to your name.")
-    async def myemoji(self, interaction: discord.Interaction, emoji: str):
-        # First, check if the user has unlocked this feature by checking if a row exists for them
-        cosmetics = await database.get_all_user_cosmetics(interaction.guild.id, [interaction.user.id])
-        if not cosmetics:
-            await interaction.response.send_message("You haven't purchased the Leaderboard Emoji unlock from the `/shop` yet!", ephemeral=True)
-            return
-
-        # A simple check to ensure it's likely a single emoji
-        if len(emoji) > 5:
-             await interaction.response.send_message("Please provide a single, valid emoji.", ephemeral=True)
-             return
-
-        await database.set_user_cosmetic(interaction.guild.id, interaction.user.id, "leaderboard_emoji", emoji)
-        await interaction.response.send_message(f"✅ Your leaderboard emoji has been set to: {emoji}", ephemeral=True)
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(RankingCog(bot))

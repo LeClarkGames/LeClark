@@ -50,20 +50,6 @@ async def send_verification_email(recipient_email: str, code: str):
         return False
 
 async def send_log_message(guild: discord.Guild, member: discord.Member, method: str):
-    tier_roles = await database.get_all_tier_roles(guild.id)
-    if tier_roles.get(4): # Check for Tier 4 role
-        tier4_role = guild.get_role(tier_roles[4])
-        if tier4_role:
-            try:
-                # Add the Tier 4 role to the new member
-                await member.add_roles(tier4_role, reason="Initial Verification - Tier 4")
-                # Set their starting tier to 4 in the database
-                await database.set_user_tier(guild.id, member.id, 4)
-                log.info(f"Assigned Tier 4 role to {member.name} and initialized activity stats.")
-            except discord.Forbidden:
-                log.error(f"Could not assign Tier 4 role to {member.name}. Missing permissions.")
-    # --- END of new/modified code ---
-
     log_channel_id = await database.get_setting(guild.id, 'log_channel_id')
     if log_channel_id:
         log_channel = guild.get_channel(log_channel_id)
@@ -76,7 +62,6 @@ async def send_log_message(guild: discord.Guild, member: discord.Member, method:
             embed.set_thumbnail(url=member.display_avatar.url)
             await log_channel.send(embed=embed)
 
-# --- Modals for different verification flows ---
 class EmailInputModal(discord.ui.Modal, title="Gmail Verification"):
     email = discord.ui.TextInput(label="Please enter your Gmail address", style=discord.TextStyle.short, required=True, placeholder="example@gmail.com")
 
@@ -123,7 +108,6 @@ class CaptchaModal(discord.ui.Modal, title="Server Verification"):
         else:
             await interaction.response.send_message("❌ Incorrect captcha. Please try again.", ephemeral=True)
 
-# --- CORRECTED: The callback function now sends modals as the initial response ---
 class FreeVerificationSelect(discord.ui.Select):
     def __init__(self, options: list):
         super().__init__(placeholder="Choose a verification method...", options=options, min_values=1, max_values=1)
@@ -319,6 +303,21 @@ class VerificationCog(commands.Cog, name="Verification"):
                     return
         
         await message.channel.send("❌ That code is incorrect or has expired. Please start the verification process again in your server.")
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        if member.bot: return
+        unverified_role_id = await database.get_setting(member.guild.id, 'unverified_role_id')
+        if unverified_role_id:
+            unverified_role = member.guild.get_role(unverified_role_id)
+            if unverified_role:
+                try:
+                    await member.add_roles(unverified_role, reason="New member join")
+                    log.info(f"Assigned unverified role to {member} in guild {member.guild.id}.")
+                except discord.Forbidden:
+                    log.error(f"Failed to assign unverified role to {member} in guild {member.guild.id}. Missing permissions.")
+            else:
+                log.error(f"Could not find the configured unverified role ({unverified_role_id}) in guild {member.guild.id}.")
 
     @app_commands.command(name="setup_verification", description="Sends the verification message.")
     @utils.has_permission("admin")

@@ -266,8 +266,6 @@ class SubmissionsSettingsView(BaseSettingsView):
         super().__init__(bot, parent_view)
         self.add_item(ChannelSelect("submission_channel_id", "Set Regular Submission Channel", self, [discord.ChannelType.text]))
         self.add_item(ChannelSelect("review_channel_id", "Set Review Channel", self, [discord.ChannelType.text]))
-        self.add_item(ChannelSelect("koth_submission_channel_id", "Set KOTH Submission Channel", self, [discord.ChannelType.text]))
-        self.add_item(RoleSelect("koth_winner_role_id", "Set KOTH Winner Role", parent_view))
 
 class ModuleSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
@@ -446,97 +444,6 @@ class MuteDurationModal(discord.ui.Modal, title="Set Mute Duration"):
         await database.update_setting(interaction.guild.id, 'warning_action_duration', duration)
         await interaction.response.send_message(f"✅ Automatic action set to **Mute** for **{duration}** minutes.", ephemeral=True)
         await self.parent_view.refresh_and_show(interaction, edit_original=True)
-        
-# Add this class near the top with the other *SettingsView classes
-class TierSystemSettingsView(BaseSettingsView):
-    def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
-        super().__init__(bot, parent_view)
-        self.message: Optional[discord.Message] = None
-
-    async def get_tiers_embed(self, guild: discord.Guild):
-        embed = discord.Embed(title="📈 Tier System Settings", description="Configure roles and activity requirements for each tier.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        roles = await database.get_all_tier_roles(guild.id)
-        reqs = await database.get_all_tier_requirements(guild.id)
-
-        for i in range(4, 0, -1): # Loop from 4 down to 1 for clarity
-            role_mention = f"<@&{roles.get(i)}>" if roles.get(i) else "Not Set"
-            
-            # --- MODIFIED TEXT ---
-            if i == 4:
-                req_text = "Base tier for all new members."
-            else:
-                tier_req = reqs.get(i, {})
-                msg_req = tier_req.get('messages_req', 'N/A')
-                vc_req = tier_req.get('voice_hours_req', 'N/A')
-                req_text = f"Requires: `{msg_req}` messages & `{vc_req}` voice hours to be promoted from Tier {i+1}."
-            # --- END MODIFIED TEXT ---
-            
-            embed.add_field(name=f"Tier {i} Role: {role_mention}", value=req_text, inline=False)
-        return embed
-
-    @discord.ui.button(label="Set Tier Roles", style=discord.ButtonStyle.secondary)
-    async def set_tier_roles(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = discord.ui.View(); view.add_item(TierRoleSelect(self))
-        await interaction.response.send_message("Select which tier's role you want to set:", view=view, ephemeral=True)
-
-    @discord.ui.button(label="Set Tier Requirements", style=discord.ButtonStyle.secondary)
-    async def set_tier_reqs(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(TierRequirementModal(self))
-
-# Add these supporting components as well
-class TierRoleSelect(discord.ui.Select):
-    def __init__(self, parent_view: TierSystemSettingsView):
-        options = [discord.SelectOption(label=f"Tier {i}", value=str(i)) for i in range(1, 5)]
-        super().__init__(placeholder="Select a tier...", options=options)
-        self.parent_view = parent_view
-    
-    async def callback(self, interaction: discord.Interaction):
-        tier_level = int(self.values[0])
-        view = discord.ui.View()
-        view.add_item(RoleSelect(f"tier{tier_level}_role_id", f"Set Tier {tier_level} Role", self.parent_view))
-        await interaction.response.edit_message(content=f"Now select the role for Tier {tier_level}:", view=view)
-
-class TierRequirementModal(discord.ui.Modal, title="Set Tier Requirements"):
-    def __init__(self, parent_view: TierSystemSettingsView):
-        super().__init__()
-        self.parent_view = parent_view
-        # --- MODIFIED TEXT ---
-        self.tier_level = discord.ui.TextInput(label="Tier to Set Requirements For (1-3)", placeholder="e.g., 2 (for promotion from T3 to T2)")
-        self.message_req = discord.ui.TextInput(label="Message Count Required", placeholder="e.g., 500")
-        self.voice_req = discord.ui.TextInput(label="Voice Hours Required", placeholder="e.g., 10")
-        # --- END MODIFIED TEXT ---
-        self.add_item(self.tier_level)
-        self.add_item(self.message_req)
-        self.add_item(self.voice_req)
-    
-    async def on_submit(self, interaction: discord.Interaction):
-        try:
-            # --- MODIFIED LOGIC ---
-            tier = int(self.tier_level.value); assert 1 <= tier <= 3
-            messages = int(self.message_req.value); assert messages >= 0
-            voice = int(self.voice_req.value); assert voice >= 0
-            # --- END MODIFIED LOGIC ---
-        except (ValueError, AssertionError):
-            return await interaction.response.send_message("Invalid input. Tier must be 1-3. Other values must be positive numbers.", ephemeral=True)
-        
-        await database.set_tier_requirement(interaction.guild.id, tier, messages, voice)
-        await interaction.response.send_message(f"✅ Requirements to get into Tier {tier} updated.", ephemeral=True)
-        await self.parent_view.refresh_and_show(interaction, edit_original=True)
-
-class GiveawaySettingsModal(discord.ui.Modal, title="Giveaway Settings"):
-    def __init__(self, parent_view: "SettingsMainView"):
-        super().__init__()
-        self.parent_view = parent_view
-        self.youtube_channel_id = discord.ui.TextInput(
-            label="YouTube Channel ID for Giveaways",
-            placeholder="e.g., UC-lHJZR3Gqxm24_Vd_AJ5Yw",
-            required=False
-        )
-        self.add_item(self.youtube_channel_id)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await database.update_setting(interaction.guild.id, 'giveaway_youtube_channel_id', self.youtube_channel_id.value)
-        await interaction.response.send_message("✅ Giveaway settings updated.", ephemeral=True)
 
 class SettingsMainView(BaseSettingsView):
     def __init__(self, bot: commands.Bot):
@@ -563,7 +470,7 @@ class SettingsMainView(BaseSettingsView):
             embed.add_field(name="Verification", value=f"**Type:** `{mode_text}`\n**Channel:** {f_ch('verification_channel_id')}\n**Roles:** {f_rl('unverified_role_id')} -> {f_rl('member_role_id')}", inline=False)
             
         embed.add_field(name="Temporary VCs", value=f"**Hub:** {f_ch('temp_vc_hub_id')}\n**Category:** {f_ch('temp_vc_category_id')}", inline=False)
-        embed.add_field(name="Submissions", value=f"**Regular:** {f_ch('submission_channel_id')} -> {f_ch('review_channel_id')}\n**KOTH:** {f_ch('koth_submission_channel_id')} -> {f_rl('koth_winner_role_id')}", inline=False)
+        embed.add_field(name="Submissions", value=f"**Regular:** {f_ch('submission_channel_id')} -> {f_ch('review_channel_id')}", inline=False)
         return embed
 
     @discord.ui.button(label="Channels", style=discord.ButtonStyle.secondary, emoji="📺", row=0)
@@ -600,24 +507,6 @@ class SettingsMainView(BaseSettingsView):
         embed = await view.get_rewards_embed(interaction.guild)
         await interaction.response.edit_message(content="Configure automatic role rewards for the ranking system.", embed=embed, view=view)
         view.message = await interaction.original_response()
-
-    @discord.ui.button(label="Shop", style=discord.ButtonStyle.secondary, emoji="⚔️", row=3)
-    async def shop_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = ShopSettingsView(self.bot, self)
-        embed = await view.get_shop_embed(interaction.guild)
-        await interaction.response.edit_message(embed=embed, view=view)
-        view.message = await interaction.original_response()
-
-    @discord.ui.button(label="Tier System", style=discord.ButtonStyle.secondary, emoji="📈", row=3)
-    async def tier_system_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
-        view = TierSystemSettingsView(self.bot, self)
-        embed = await view.get_tiers_embed(interaction.guild)
-        await interaction.response.edit_message(embed=embed, view=view)
-        view.message = await interaction.original_response()
-
-    @discord.ui.button(label="Giveaway", style=discord.ButtonStyle.secondary, emoji="🎉", row=3)
-    async def giveaway_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(GiveawaySettingsModal(self))
 
 class ShopCostModal(discord.ui.Modal):
     def __init__(self, parent_view: "ShopSettingsView", item_name: str, setting_key: str):

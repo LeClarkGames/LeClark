@@ -37,9 +37,7 @@
             <a href="{{ url_for('panel_home', guild_id=guild_id) }}">Dashboard</a>
             <a href="{{ url_for('panel_statistics', guild_id=guild_id) }}">Statistics</a>
             <a href="{{ url_for('panel_widgets', guild_id=guild_id) }}">Widgets</a>
-            <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a>
-            <a href="{{ url_for('panel_tiers', guild_id=guild_id) }}">Tiers</a>
-            <a href="{{ url_for('panel_giveaway', guild_id=guild_id) }}">Giveaway</a>
+            <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a
         </aside>
         <main class="main-content">
             <div class="header-bar">
@@ -67,13 +65,6 @@
                     <button class="button" onclick="copyToClipboard('regularUrl', 'regular-status')">Copy</button>
                 </div>
                 <p class="copy-status" id="regular-status">Copied!</p>
-
-                <h4 style="margin-top: 2rem;">⚔️ King of the Hill Widget</h4>
-                <div class="url-box">
-                    <input type="text" class="input" value="{{ koth_widget_url }}" id="kothUrl" readonly>
-                    <button class="button" onclick="copyToClipboard('kothUrl', 'koth-status')">Copy</button>
-                </div>
-                 <p class="copy-status" id="koth-status">Copied!</p>
             </div>
         </main>
     </div>

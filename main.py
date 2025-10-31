@@ -5,13 +5,11 @@ import logging
 from dotenv import load_dotenv
 import asyncio
 
-# --- Bot Components ---
 import database
 import config
 from web_server import app
 from cogs.verification import VerificationButton
 from cogs.reporting import ReportTriggerView
-# --- ADD THIS ---
 from cogs.submissions import (
     SubmissionViewClosed, 
     SubmissionViewOpen, 
@@ -19,7 +17,6 @@ from cogs.submissions import (
     SubmissionViewKothOpen, 
     SubmissionViewKothTiebreaker
 )
-# --- END ADD ---
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN_TEST")

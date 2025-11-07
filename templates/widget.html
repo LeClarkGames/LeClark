@@ -31,15 +31,6 @@
             -webkit-text-fill-color: transparent;
             animation: text-flow 8s ease infinite;
         }
-        
-        /* --- NEW: KOTH Leaderboard Rank Animation --- */
-        @keyframes koth-rank-flow {
-            0%   { color: #ffd700; } /* Gold */
-            25%  { color: #a458f2; } /* Purple */
-            50%  { color: #58e6f2; } /* Cyan */
-            75%  { color: #ffffff; } /* White */
-            100% { color: #ffd700; } /* Back to Gold */
-        }
 
         body, html {
             font-family: 'Poppins', sans-serif;
@@ -134,10 +125,6 @@
             margin-right: 15px;
             width: 25px;
         }
-        /* --- MODIFICATION: Apply animation to top 10 usernames --- */
-        .koth-top-10 .username {
-            animation: koth-rank-flow 10s linear infinite;
-        }
 
         .username { font-weight: 600; }
 
@@ -198,15 +185,8 @@
     <div id="notification"></div>
 
     <script>
-        // The JavaScript is updated to add the new class for KOTH leaderboard
         const params = new URLSearchParams(window.location.search);
         const token = "{{ token }}";
-        const type = params.get('type'); 
-        if (type === 'regular') {
-            document.getElementById('koth-widget').style.display = 'none';
-        } else if (type === 'koth') {
-            document.getElementById('regular-widget').style.display = 'none';
-        }
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${token}`;
         let socket;
@@ -217,7 +197,6 @@
                 const data = JSON.parse(event.data);
                 if (data.type === 'full_update') {
                     updateRegularWidget(data.regular_data);
-                    updateKOTHWidget(data.koth_data);
                 } else if (data.type === 'new_submission') {
                     showNotification(data);
                 }
@@ -235,34 +214,6 @@
             document.getElementById('regular-queue').textContent = data.queue;
             document.getElementById('regular-reviewing').textContent = data.reviewing || 'None';
         }
-        function updateKOTHWidget(data) {
-            document.getElementById('koth-king').textContent = data.king || 'None';
-            document.getElementById('koth-queue').textContent = data.queue;
-            // NEW LINE: This updates the title dynamically
-            document.getElementById('koth-leaderboard-title').textContent = data.leaderboard_title || 'Leaderboard';
-
-            const leaderboardList = document.getElementById('leaderboard-list');
-            leaderboardList.innerHTML = '';
-            if (data.leaderboard && data.leaderboard.length > 0) {
-                data.leaderboard.forEach((user, index) => {
-                    const li = document.createElement('li');
-                    if (index < 10) {
-                        li.classList.add('koth-top-10');
-                    }
-                    li.innerHTML = `<span class="rank">${index + 1}.</span><span class="username">${user.name}</span><span class="points">${user.points} pts</span>`;
-                    leaderboardList.appendChild(li);
-                });
-            } else {
-                leaderboardList.innerHTML = '<li style="color: var(--text-secondary);">No one on the leaderboard yet.</li>';
-            }
-        }
-        function showNotification(data) {
-            const notification = document.getElementById('notification');
-            notification.innerHTML = `<img src="${data.avatar_url}" alt="avatar"> <span><strong>${data.username}</strong> just submitted a track!</span>`;
-            notification.classList.add('show');
-            setTimeout(() => { notification.classList.remove('show'); }, 5000);
-        }
-        if (token) { connect(); } else { document.body.innerHTML = "<h1>Error: Missing authentication token.</h1>"; }
     </script>
 </body>
 </html>

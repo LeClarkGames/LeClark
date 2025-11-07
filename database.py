@@ -36,7 +36,6 @@ async def initialize_database():
                 mod_chat_channel_id INTEGER, temp_vc_hub_id INTEGER, temp_vc_category_id INTEGER,
                 submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
                 review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0,
-                koth_submission_channel_id INTEGER, koth_winner_role_id INTEGER, verification_mode TEXT DEFAULT 'captcha',
                 ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1,
                 temp_vc_system_enabled INTEGER DEFAULT 1, reporting_system_enabled INTEGER DEFAULT 1
             )
@@ -74,12 +73,6 @@ async def initialize_database():
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN ranking_system_enabled INTEGER DEFAULT 1")
         if 'free_verification_modes' not in settings_columns: 
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN free_verification_modes TEXT DEFAULT 'captcha,twitch,youtube,gmail'")
-
-        await cursor.execute("PRAGMA table_info(koth_leaderboard)")
-        koth_columns = [row[1] for row in await cursor.fetchall()]
-        if 'wins' not in koth_columns: await cursor.execute("ALTER TABLE koth_leaderboard ADD COLUMN wins INTEGER NOT NULL DEFAULT 0")
-        if 'losses' not in koth_columns: await cursor.execute("ALTER TABLE koth_leaderboard ADD COLUMN losses INTEGER NOT NULL DEFAULT 0")
-        if 'streak' not in koth_columns: await cursor.execute("ALTER TABLE koth_leaderboard ADD COLUMN streak INTEGER NOT NULL DEFAULT 0")
 
         await cursor.execute("PRAGMA table_info(warnings)")
         warnings_columns = [row[1] for row in await cursor.fetchall()]

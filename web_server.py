@@ -429,9 +429,8 @@ async def xp_leaderboard(guild_id: int):
     users = [] # Initialize the list first
     if raw_leaderboard: # Only proceed if there's data
         user_ids = [user_id for user_id, xp in raw_leaderboard]
-        cosmetics_task = database.get_all_user_cosmetics(guild_id, user_ids)
         user_data_task = asyncio.gather(*[fetch_user_data(uid) for uid in user_ids])
-        cosmetics, fetched_users = await asyncio.gather(cosmetics_task, user_data_task)
+        fetched_users = await asyncio.gather(user_data_task)
         
         for i, (user_id, xp) in enumerate(raw_leaderboard):
             user_info = fetched_users[i]
@@ -440,8 +439,7 @@ async def xp_leaderboard(guild_id: int):
                 "name": user_info['name'],
                 "avatar_url": user_info['avatar_url'],
                 "score": xp,
-                "details": f"Level: {rank_name}",
-                "emoji": cosmetics.get(user_id)
+                "details": f"Level: {rank_name}"
             })
 
     # Now, we can safely render the template
@@ -623,7 +621,6 @@ async def api_user_search(guild_id: int):
     # Fetch all the user's data
     activity = await database.get_user_activity(guild_id, found_member.id)
     channel_activity_raw = await database.get_user_channel_activity(guild_id, found_member.id)
-    tier = await database.get_user_tier(guild_id, found_member.id)
 
     channel_activity = {}
     for cid, msgs, secs in channel_activity_raw:
@@ -634,7 +631,6 @@ async def api_user_search(guild_id: int):
     final_response = jsonify({
         "name": found_member.display_name,
         "avatar_url": found_member.display_avatar.url,
-        "tier": tier or 1,
         "total_messages": activity.get('message_count', 0) if activity else 0,
         "total_voice_seconds": activity.get('voice_seconds', 0) if activity else 0,
         "channel_activity": channel_activity

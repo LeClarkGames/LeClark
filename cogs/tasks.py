@@ -33,7 +33,6 @@ class TasksCog(commands.Cog, name="Background Tasks"):
             # Fetch all settings and data for the guild
             # For a complete backup, you would fetch from every relevant table
             backup_data['guild_settings'] = await database.get_all_settings(guild.id)
-            backup_data['koth_leaderboard'] = await database.get_koth_leaderboard(guild.id)
             backup_data['ranking_leaderboard'] = await database.get_leaderboard(guild.id, limit=999)
             # You could add more fetches for warnings, reaction roles, etc.
             

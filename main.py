@@ -12,10 +12,7 @@ from cogs.verification import VerificationButton
 from cogs.reporting import ReportTriggerView
 from cogs.submissions import (
     SubmissionViewClosed,
-    SubmissionViewOpen,
-    SubmissionViewKothClosed,
-    SubmissionViewKothOpen,
-    SubmissionViewKothTiebreaker
+    SubmissionViewOpen
 )
 
 load_dotenv()
@@ -44,9 +41,6 @@ class MyBot(commands.Bot):
         # --- ADD THIS BLOCK ---
         self.add_view(SubmissionViewClosed(self))
         self.add_view(SubmissionViewOpen(self))
-        self.add_view(SubmissionViewKothClosed(self))
-        self.add_view(SubmissionViewKothOpen(self))
-        self.add_view(SubmissionViewKothTiebreaker(self))
         # --- END ADD ---
         log.info("Registered persistent UI views.")
 

@@ -32,9 +32,6 @@
                     <img src="{{ user.avatar_url }}" alt="User Avatar" class="user-avatar">
                     <div class="user-info">
                             <p class="name">
-                                {% if user.emoji %}
-                                    <span class="emoji">{{ user.emoji }}</span>
-                                {% endif %}
                                 {{ user.name }}
                             </p>
                             <p class="details">{{ user.details }}</p>

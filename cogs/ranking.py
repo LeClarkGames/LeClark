@@ -61,7 +61,6 @@ class RankingCog(commands.Cog, name="Ranking"):
         self.xp_cooldowns = defaultdict(int)
         self.cooldown_seconds = 60
         self.voice_xp_loop.start()
-        self.cleanup_buffs_loop.start() # Start the new cleanup task
 
     async def cog_check(self, interaction: discord.Interaction) -> bool:
         is_enabled = await database.get_setting(interaction.guild.id, 'ranking_system_enabled')
@@ -72,17 +71,6 @@ class RankingCog(commands.Cog, name="Ranking"):
 
     def cog_unload(self):
         self.voice_xp_loop.cancel()
-        self.cleanup_buffs_loop.cancel()
-
-    @tasks.loop(hours=1)
-    async def cleanup_buffs_loop(self):
-        """Periodically cleans up expired buffs from the database."""
-        await database.cleanup_expired_buffs()
-        log.info("Ran scheduled cleanup of expired user buffs.")
-
-    @cleanup_buffs_loop.before_loop
-    async def before_cleanup_buffs_loop(self):
-        await self.bot.wait_until_ready()
 
     async def _handle_xp_gain(self, guild: discord.Guild, member: discord.Member, xp_to_add: int):
         """A central function to handle adding XP and checking for rank rewards."""

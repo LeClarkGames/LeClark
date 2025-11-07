@@ -27,17 +27,14 @@ async def initialize_database():
     conn = await get_db_connection()
     if not conn: return
     async with conn.cursor() as cursor:
-        # --- Main Tables ---
         await cursor.execute("""
             CREATE TABLE IF NOT EXISTS guild_settings (
-                guild_id INTEGER PRIMARY KEY, log_channel_id INTEGER, report_channel_id INTEGER,
                 verification_channel_id INTEGER, unverified_role_id INTEGER, member_role_id INTEGER,
                 verification_message_id INTEGER, admin_role_ids TEXT, mod_role_ids TEXT,
                 mod_chat_channel_id INTEGER, temp_vc_hub_id INTEGER, temp_vc_category_id INTEGER,
                 submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
                 review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0,
-                ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1,
-                temp_vc_system_enabled INTEGER DEFAULT 1, reporting_system_enabled INTEGER DEFAULT 1
+                ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1
             )
         """)
         await cursor.execute("""CREATE TABLE IF NOT EXISTS channel_activity (guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, channel_id INTEGER NOT NULL,message_count INTEGER DEFAULT 0, voice_seconds INTEGER DEFAULT 0,PRIMARY KEY (guild_id, user_id, channel_id))""")
@@ -66,8 +63,6 @@ async def initialize_database():
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN submissions_system_enabled INTEGER DEFAULT 1")
         if 'temp_vc_system_enabled' not in settings_columns: 
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN temp_vc_system_enabled INTEGER DEFAULT 1")
-        if 'reporting_system_enabled' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN reporting_system_enabled INTEGER DEFAULT 1")
         if 'ranking_system_enabled' not in settings_columns: 
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN ranking_system_enabled INTEGER DEFAULT 1")
         if 'free_verification_modes' not in settings_columns: 

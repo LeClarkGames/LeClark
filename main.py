@@ -9,7 +9,6 @@ import database
 import config
 from web_server import app
 from cogs.verification import VerificationButton
-from cogs.reporting import ReportTriggerView
 from cogs.submissions import (
     SubmissionViewClosed,
     SubmissionViewOpen
@@ -36,7 +35,6 @@ class MyBot(commands.Bot):
         
         await database.initialize_database()
         
-        self.add_view(ReportTriggerView(bot=self))
         self.add_view(VerificationButton(bot=self))
         # --- ADD THIS BLOCK ---
         self.add_view(SubmissionViewClosed(self))
@@ -46,8 +44,8 @@ class MyBot(commands.Bot):
 
         cogs_to_load = [
             "cogs.settings", "cogs.moderation",
-            "cogs.verification", "cogs.reporting",
-            "cogs.temp_vc", "cogs.submissions", "cogs.tasks",
+            "cogs.verification", "cogs.temp_vc", 
+            "cogs.submissions", "cogs.tasks",
             "cogs.ranking", "cogs.utility", "cogs.panel_handler"
         ]
         for cog in cogs_to_load:

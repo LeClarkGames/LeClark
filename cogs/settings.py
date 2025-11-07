@@ -126,7 +126,6 @@ class SettingsMainView(BaseSettingsView):
     async def channel_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
         items = [
             ChannelSelect("log_channel_id", "Set Log Channel", self, [discord.ChannelType.text]),
-            ChannelSelect("report_channel_id", "Set Report Button Channel", self, [discord.ChannelType.text]),
             ChannelSelect("mod_chat_channel_id", "Set Mod Chat Channel", self, [discord.ChannelType.text]),
             ChannelSelect("announcement_channel_id", "Set Announcement Channel", self, [discord.ChannelType.text])
         ]
@@ -149,7 +148,6 @@ class ChannelSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
         super().__init__(bot, parent_view)
         self.add_item(ChannelSelect("log_channel_id", "Set Log Channel", self, [discord.ChannelType.text]))
-        self.add_item(ChannelSelect("report_channel_id", "Set Report Button Channel", self, [discord.ChannelType.text]))
         self.add_item(ChannelSelect("mod_chat_channel_id", "Set Mod Chat Channel", self, [discord.ChannelType.text]))
         self.add_item(ChannelSelect("announcement_channel_id", "Set Announcement Channel", self, [discord.ChannelType.text]))
 
@@ -278,7 +276,6 @@ class ModuleSettingsView(BaseSettingsView):
         embed.add_field(name="🎵 Submissions System", value=get_status('submissions_system_enabled'), inline=False)
         embed.add_field(name="🏆 Ranking System", value=get_status('ranking_system_enabled'), inline=False)
         embed.add_field(name="🔊 Temporary VCs", value=get_status('temp_vc_system_enabled'), inline=False)
-        embed.add_field(name="📝 Reporting System", value=get_status('reporting_system_enabled'), inline=False)
         return embed
 
     async def toggle_module(self, interaction: discord.Interaction, module_name: str):
@@ -295,8 +292,6 @@ class ModuleSettingsView(BaseSettingsView):
     async def toggle_ranking(self, interaction: discord.Interaction, button: discord.ui.Button): await self.toggle_module(interaction, "ranking_system_enabled")
     @discord.ui.button(label="Toggle Temp VCs", style=discord.ButtonStyle.secondary, row=2)
     async def toggle_temp_vcs(self, interaction: discord.Interaction, button: discord.ui.Button): await self.toggle_module(interaction, "temp_vc_system_enabled")
-    @discord.ui.button(label="Toggle Reporting", style=discord.ButtonStyle.secondary, row=3)
-    async def toggle_reporting(self, interaction: discord.Interaction, button: discord.ui.Button): await self.toggle_module(interaction, "reporting_system_enabled")
 
 class RankRewardsSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
@@ -455,7 +450,7 @@ class SettingsMainView(BaseSettingsView):
         def f_ch(k): return f"<#{settings_data.get(k)}>" if settings_data.get(k) else "Not Set"
         def f_rl(k): return f"<@&{settings_data.get(k)}>" if settings_data.get(k) else "Not Set"
         def f_rls(k): return ", ".join([f"<@&{r}>" for r in (settings_data.get(k) or "").split(',') if r]) or "Not Set"
-        embed.add_field(name="General Channels", value=f"**Log:** {f_ch('log_channel_id')}\n**Report:** {f_ch('report_channel_id')}\n**Announce:** {f_ch('announcement_channel_id')}", inline=False)
+        embed.add_field(name="General Channels", value=f"**Log:** {f_ch('log_channel_id')}\n**Announce:** {f_ch('announcement_channel_id')}", inline=False)
         embed.add_field(name="Role Permissions", value=f"**Admins:** {f_rls('admin_role_ids')}\n**Mods:** {f_rls('mod_role_ids')}", inline=False)
         
         # New Verification section summary

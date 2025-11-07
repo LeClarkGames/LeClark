@@ -57,7 +57,7 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
 
             elif action == 'run_setup':
                 setup_map = {
-                    'verification': 'setup_verification', 'submission': 'setup_submission_panel', 'report': 'setup_report'
+                    'verification': 'setup_verification', 'submission': 'setup_submission_panel'
                 }
                 command_name = setup_map.get(task.get('setup_type'))
                 if command := self.bot.tree.get_command(command_name):

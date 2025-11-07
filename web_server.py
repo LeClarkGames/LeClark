@@ -649,7 +649,7 @@ async def api_run_setup(guild_id: int):
     form = await request.form
     setup_type = form.get('setup_type')
     
-    if not setup_type in ['verification', 'submission', 'report']:
+    if not setup_type in ['verification', 'submission']:
         return jsonify({"error": "Invalid setup type."}), 400
 
     task = {

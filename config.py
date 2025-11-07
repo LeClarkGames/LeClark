@@ -7,9 +7,5 @@ BOT_CONFIG = {
         "SUCCESS": 0x57F287,
         "WARNING": 0xFEE75C,
         "ERROR": 0xED4245,
-    },
-
-    "APPROVAL_TIMEOUT_SECONDS": 1800,
-
-    "DEFAULT_MUTE_MINS": 30,
+    }
 }

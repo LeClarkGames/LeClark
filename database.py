@@ -37,7 +37,6 @@ async def initialize_database():
                 ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1
             )
         """)
-        await cursor.execute("""CREATE TABLE IF NOT EXISTS channel_activity (guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, channel_id INTEGER NOT NULL,message_count INTEGER DEFAULT 0, voice_seconds INTEGER DEFAULT 0,PRIMARY KEY (guild_id, user_id, channel_id))""")
         await cursor.execute("CREATE TABLE IF NOT EXISTS warnings (warning_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, moderator_id INTEGER NOT NULL, reason TEXT, issued_at TIMESTAMP NOT NULL, log_message_id INTEGER)")
         await cursor.execute("CREATE TABLE IF NOT EXISTS temporary_vcs (channel_id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, text_channel_id INTEGER)")
         await cursor.execute("CREATE TABLE IF NOT EXISTS music_submissions ( submission_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, track_url TEXT NOT NULL, status TEXT NOT NULL, submitted_at TIMESTAMP NOT NULL, reviewer_id INTEGER, submission_type TEXT DEFAULT 'regular' )")
@@ -347,86 +346,6 @@ async def get_current_review(guild_id: int, submission_type: str = 'regular'):
         result = await cursor.fetchone()
         return result[0] if result else None
 
-async def update_user_activity(guild_id: int, user_id: int, message_count: int = 0, voice_seconds: int = 0):
-    conn = await get_db_connection()
-    await conn.execute("""
-        INSERT INTO user_activity (guild_id, user_id, message_count, voice_seconds, last_updated)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(guild_id, user_id) DO UPDATE SET
-        message_count = message_count + excluded.message_count,
-        voice_seconds = voice_seconds + excluded.voice_seconds,
-        last_updated = CURRENT_TIMESTAMP
-    """, (guild_id, user_id, message_count, voice_seconds))
-    await conn.commit()
-
-async def set_tier_requirement(guild_id: int, tier_level: int, messages: int, voice_hours: int):
-    conn = await get_db_connection()
-    await conn.execute("INSERT INTO tier_requirements (guild_id, tier_level, messages_req, voice_hours_req) VALUES (?, ?, ?, ?) ON CONFLICT(guild_id, tier_level) DO UPDATE SET messages_req=excluded.messages_req, voice_hours_req=excluded.voice_hours_req", (guild_id, tier_level, messages, voice_hours))
-    await conn.commit()
-
-# REPLACE this function
-async def get_user_activity(guild_id: int, user_id: int):
-    """Calculates a user's total activity by summing their channel_activity."""
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT SUM(message_count), SUM(voice_seconds) 
-            FROM channel_activity 
-            WHERE guild_id = ? AND user_id = ?
-        """, (guild_id, user_id))
-        result = await cursor.fetchone()
-        if not result or result[0] is None: 
-            return {'message_count': 0, 'voice_seconds': 0}
-        return {'message_count': result[0], 'voice_seconds': result[1]}
-
-async def get_all_tier_requirements(guild_id: int):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT tier_level, messages_req, voice_hours_req FROM tier_requirements WHERE guild_id = ?", (guild_id,))
-        rows = await cursor.fetchall()
-        return {row[0]: {'messages_req': row[1], 'voice_hours_req': row[2]} for row in rows}
-
-async def create_or_update_tier_approval_request(guild_id, user_id, next_tier, token, message_id):
-    """Creates a new tier approval request or updates an existing one for a user."""
-    conn = await get_db_connection()
-    await conn.execute("""
-        INSERT INTO tier_approval_requests (guild_id, user_id, next_tier, token, message_id)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(guild_id, user_id) DO UPDATE SET
-            next_tier = excluded.next_tier,
-            token = excluded.token,
-            message_id = excluded.message_id,
-            created_at = CURRENT_TIMESTAMP
-    """, (guild_id, user_id, next_tier, token, message_id))
-    await conn.commit()
-
-async def get_tier_approval_request(guild_id, user_id):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT token FROM tier_approval_requests WHERE guild_id = ? AND user_id = ?", (guild_id, user_id))
-        result = await cursor.fetchone()
-        return result[0] if result else None
-
-async def get_tier_request_by_token(token: str):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT guild_id, user_id, next_tier, message_id FROM tier_approval_requests WHERE token = ?", (token,))
-        result = await cursor.fetchone()
-        if not result: return None
-        return {'guild_id': result[0], 'user_id': result[1], 'next_tier': result[2], 'message_id': result[3], 'token': token}
-
-async def delete_tier_request(token: str):
-    conn = await get_db_connection()
-    await conn.execute("DELETE FROM tier_approval_requests WHERE token = ?", (token,))
-    await conn.commit()
-
-async def get_all_tier_roles(guild_id: int):
-    settings = await get_all_settings(guild_id)
-    return {
-        1: settings.get('tier1_role_id'), 2: settings.get('tier2_role_id'),
-        3: settings.get('tier3_role_id'), 4: settings.get('tier4_role_id')
-    }
-
 async def update_channel_activity(guild_id: int, user_id: int, channel_id: int, message_count: int = 0, voice_seconds: int = 0):
     conn = await get_db_connection()
     await conn.execute("""
@@ -485,16 +404,3 @@ async def get_top_users_today(guild_id: int, limit: int = 5):
             LIMIT ?
         """, (guild_id, limit))
         return await cursor.fetchall()
-    
-async def get_all_pending_tier_requests(guild_id: int):
-    """Gets all pending tier approval requests for a guild."""
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT user_id, next_tier, token, message_id 
-            FROM tier_approval_requests 
-            WHERE guild_id = ? 
-            ORDER BY created_at ASC
-        """, (guild_id,))
-        rows = await cursor.fetchall()
-        return [{'user_id': r[0], 'next_tier': r[1], 'token': r[2], 'message_id': r[3]} for r in rows]

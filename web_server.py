@@ -16,6 +16,8 @@ import config
 
 import database
 from cogs.ranking import get_rank_info
+from cogs.verification import VerificationButton
+from cogs.submissions import get_panel_embed_and_view
 
 load_dotenv()
 
@@ -640,25 +642,69 @@ async def api_user_search(guild_id: int):
     final_response.headers['Expires'] = '0'
     return final_response
 
-# In web_server.py, add these routes after the existing API routes
-
 @app.route('/api/v1/actions/run-setup/<int:guild_id>', methods=['POST'])
 @login_required
 async def api_run_setup(guild_id: int):
-    """API endpoint to queue a setup command."""
+    """API endpoint to *directly* run setup commands."""
     form = await request.form
     setup_type = form.get('setup_type')
+    bot = app.bot_instance
+    guild = bot.get_guild(guild_id)
     
-    if not setup_type in ['verification', 'submission']:
-        return jsonify({"error": "Invalid setup type."}), 400
+    if not guild:
+        return jsonify({"error": "Bot could not find this guild."}), 404
 
-    task = {
-        "action": "run_setup", "guild_id": guild_id,
-        "moderator_id": int(session.get('user_id')),
-        "setup_type": setup_type
-    }
-    app.bot_instance.action_queue.put_nowait(task)
-    return jsonify({"message": f"Setup command for '{setup_type}' queued successfully."}), 200
+    if setup_type == 'verification':
+        channel_id = await database.get_setting(guild.id, 'verification_channel_id')
+        if not channel_id:
+            return jsonify({"error": "Verification channel not set in bot settings."}), 400
+        
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            return jsonify({"error": "Verification channel not found."}), 404
+        
+        try:
+            embed = discord.Embed(title="Server Verification", description="To gain access to the server, click the button below and complete the required action.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
+            view = VerificationButton(bot)
+            await channel.send(embed=embed, view=view)
+            return jsonify({"message": f"Verification message sent to {channel.mention}!"}), 200
+        except discord.Forbidden:
+            return jsonify({"error": f"Bot lacks permission to send messages in {channel.mention}."}), 403
+        except Exception as e:
+            log.error(f"Error in panel setup (verification): {e}")
+            return jsonify({"error": "An internal error occurred."}), 500
+
+    elif setup_type == 'submission':
+        channel_id = await database.get_setting(guild.id, 'review_channel_id')
+        if not channel_id:
+            return jsonify({"error": "Review channel not set in bot settings."}), 400
+        
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            return jsonify({"error": "Review channel not found."}), 404
+
+        try:
+            # Try to delete the old panel message if it exists
+            if submissions_cog := bot.get_cog("Submissions"):
+                if old_panel := await submissions_cog.get_panel_message(guild):
+                    try: await old_panel.delete()
+                    except (discord.Forbidden, discord.NotFound): pass
+            
+            embed, view = await get_panel_embed_and_view(guild, bot)
+            panel_message = await channel.send(embed=embed, view=view)
+            
+            await database.update_setting(guild.id, 'review_panel_message_id', panel_message.id)
+            await database.update_setting(guild.id, 'submission_status', 'closed')
+
+            return jsonify({"message": f"Submission panel has been posted in {channel.mention}."}), 200
+        except discord.Forbidden:
+            return jsonify({"error": f"Bot lacks permission to send messages in {channel.mention}."}), 403
+        except Exception as e:
+            log.error(f"Error in panel setup (submission): {e}")
+            return jsonify({"error": "An internal error occurred."}), 500
+
+    else:
+        return jsonify({"error": "Invalid setup type."}), 400
 
 @app.route('/api/v1/actions/send-message/<int:guild_id>', methods=['POST'])
 @login_required
@@ -724,3 +770,15 @@ async def api_manage_staff(guild_id: int):
 
     app.bot_instance.action_queue.put_nowait(task)
     return jsonify({"message": f"Staff role {task['role_action']} action queued successfully."}), 200
+
+@app.route('/api/v1/actions/reset-stuck-review/<int:guild_id>', methods=['POST'])
+@login_required
+async def api_reset_stuck_review(guild_id: int):
+    """API endpoint to queue resetting a stuck submission."""
+    task = {
+        "action": "reset_stuck_review",
+        "guild_id": guild_id,
+        "moderator_id": int(session.get('user_id')),
+    }
+    app.bot_instance.action_queue.put_nowait(task)
+    return jsonify({"message": "Reset command queued successfully."}), 200

@@ -319,20 +319,5 @@ class VerificationCog(commands.Cog, name="Verification"):
             else:
                 log.error(f"Could not find the configured unverified role ({unverified_role_id}) in guild {member.guild.id}.")
 
-    @app_commands.command(name="setup_verification", description="Sends the verification message.")
-    @utils.has_permission("admin")
-    async def setup_verification(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        channel_id = await database.get_setting(interaction.guild.id, 'verification_channel_id')
-        if not channel_id:
-            return await interaction.followup.send("Verification channel not set. Use `/settings` first.", ephemeral=True)
-        
-        channel = self.bot.get_channel(channel_id)
-        embed = discord.Embed(title="Server Verification", description="To gain access to the server, click the button below and complete the required action.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        view = VerificationButton(self.bot)
-        
-        await channel.send(embed=embed, view=view)
-        await interaction.followup.send(f"✅ Verification message sent to {channel.mention}!", ephemeral=True)
-
 async def setup(bot: commands.Bot):
     await bot.add_cog(VerificationCog(bot))

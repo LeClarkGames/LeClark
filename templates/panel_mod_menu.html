@@ -75,10 +75,11 @@
                 </div>
 
                 <div class="card">
-                    <h3>Setup Panels</h3>
-                    <p class="subtitle" style="margin-bottom: 1.5rem;">Run the setup commands to post the interactive panels in their configured channels.</p>
+                    <h3>Setup Panels & Resets</h3>
+                    <p class="subtitle" style="margin-bottom: 1.5rem;">Run setup commands or reset stuck bot processes.</p>
                     <button class="button setup-btn" data-setup="verification">Setup Verification</button>
                     <button class="button setup-btn" style="margin-top: 1rem;" data-setup="submission">Setup Submissions</button>
+                    <button class="button" id="reset-stuck-review-btn" style="margin-top: 1rem; background-color: #f0a000; border-color: #f0a000;">Reset Stuck Review</button>
                     <div id="setup-response"></div>
                 </div>
 
@@ -260,6 +261,11 @@
             } else {
                 contentDiv.innerHTML = '<p style="color: var(--accent-color);">Failed to load audit logs.</p>';
             }
+        });
+        document.getElementById('reset-stuck-review-btn').addEventListener('click', async () => {
+            const response = await fetch(`/api/v1/actions/reset-stuck-review/${guildId}`, { method: 'POST' });
+            const result = await response.json();
+            showResponse('setup-response', result.message || result.error, !response.ok);
         });
     </script>
 </body>

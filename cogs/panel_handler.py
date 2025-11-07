@@ -25,7 +25,6 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                 self.bot.action_queue.task_done()
                 return
             
-            # Moderator isn't always needed, so we fetch it later if required.
             moderator_id = task.get('moderator_id')
 
             action = task.get('action')
@@ -55,21 +54,7 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                     except discord.Forbidden:
                         log.error(f"Missing permissions to {mod_action} member {target.id} in guild {guild.id}.")
 
-            elif action == 'run_setup':
-                setup_map = {
-                    'verification': 'setup_verification', 'submission': 'setup_submission_panel'
-                }
-                command_name = setup_map.get(task.get('setup_type'))
-                if command := self.bot.tree.get_command(command_name):
-                    # We can't properly run setup commands from here.
-                    # A better approach is to notify a channel that a setup is requested.
-                    log_channel_id = await database.get_setting(guild.id, 'log_channel_id')
-                    if log_channel_id and (log_channel := guild.get_channel(log_channel_id)):
-                        moderator = guild.get_member(moderator_id)
-                        await log_channel.send(f"**Panel Action:** {moderator.mention if moderator else 'A staff member'} requested to run `/{command_name}` from the web panel.")
-
             elif action == 'send_message':
-                # --- CORRECTED LOGIC ---
                 try:
                     channel_id = int(task.get('channel_id'))
                     channel = guild.get_channel(channel_id)
@@ -86,9 +71,7 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                         log.error(f"Could not find channel {channel_id} to send message.")
                 except (discord.Forbidden, ValueError):
                     log.error(f"Missing permissions or invalid channel ID for send_message.")
-                # --- END CORRECTION ---
-
-            # --- START OF REPLACEMENT BLOCK ---
+                
             elif action == 'manage_staff':
                 try:
                     moderator = guild.get_member(moderator_id)
@@ -142,7 +125,34 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                     log.error(f"A permissions error occurred while managing staff role: {e}")
                 except Exception as e:
                     log.error(f"An unexpected error occurred in staff management: {e}")
-            # --- END OF REPLACEMENT BLOCK ---
+
+            elif action == 'reset_stuck_review':
+                try:
+                    conn = await database.get_db_connection()
+                    async with conn.cursor() as cursor:
+                        await cursor.execute(
+                            "SELECT submission_id, user_id FROM music_submissions WHERE guild_id = ? AND status = 'reviewing' AND submission_type = 'regular' LIMIT 1",
+                            (guild.id,)
+                        )
+                        stuck_submission = await cursor.fetchone()
+
+                    if not stuck_submission:
+                        log.info(f"Panel action 'reset_stuck_review' found no stuck submissions for guild {guild.id}.")
+                        self.bot.action_queue.task_done()
+                        return
+
+                    submission_id, user_id = stuck_submission
+                    await database.update_submission_status(submission_id, "pending", None)
+                    
+                    log.info(f"Panel action by {moderator_id} manually reset stuck submission {submission_id}.")
+
+                    # Need to update the panels
+                    if submissions_cog := self.bot.get_cog("Submissions"):
+                        await submissions_cog._update_panel_after_submission(guild)
+                        await submissions_cog._broadcast_full_update(guild.id)
+                
+                except Exception as e:
+                    log.error(f"Error during reset_stuck_review action: {e}", exc_info=True)
 
             self.bot.action_queue.task_done()
 

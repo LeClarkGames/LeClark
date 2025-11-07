@@ -98,8 +98,6 @@ class BaseSettingsView(discord.ui.View):
              embed = await target_view.get_rewards_embed(interaction.guild)
         elif isinstance(target_view, WarningSettingsView):
              embed = await target_view.get_warnings_embed(interaction.guild)
-        elif isinstance(target_view, ShopSettingsView):
-             embed = await target_view.get_shop_embed(interaction.guild)
 
         try:
             if interaction.response.is_done():
@@ -126,7 +124,6 @@ class SettingsMainView(BaseSettingsView):
     async def channel_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
         items = [
             ChannelSelect("log_channel_id", "Set Log Channel", self, [discord.ChannelType.text]),
-            ChannelSelect("mod_chat_channel_id", "Set Mod Chat Channel", self, [discord.ChannelType.text]),
             ChannelSelect("announcement_channel_id", "Set Announcement Channel", self, [discord.ChannelType.text])
         ]
         view = GenericSettingsView(self.bot, self, "Channel Settings", items)
@@ -142,13 +139,12 @@ class SettingsMainView(BaseSettingsView):
         view = GenericSettingsView(self.bot, self, "Temp VC Settings", items)
         embed = await view.get_embed(interaction.guild)
         await interaction.response.edit_message(embed=embed, view=view)
-    
-# --- Sub-Menu Views ---
+
+
 class ChannelSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
         super().__init__(bot, parent_view)
         self.add_item(ChannelSelect("log_channel_id", "Set Log Channel", self, [discord.ChannelType.text]))
-        self.add_item(ChannelSelect("mod_chat_channel_id", "Set Mod Chat Channel", self, [discord.ChannelType.text]))
         self.add_item(ChannelSelect("announcement_channel_id", "Set Announcement Channel", self, [discord.ChannelType.text]))
 
 class RoleManagementView(BaseSettingsView):
@@ -503,56 +499,6 @@ class SettingsMainView(BaseSettingsView):
         await interaction.response.edit_message(content="Configure automatic role rewards for the ranking system.", embed=embed, view=view)
         view.message = await interaction.original_response()
 
-class ShopCostModal(discord.ui.Modal):
-    def __init__(self, parent_view: "ShopSettingsView", item_name: str, setting_key: str):
-        super().__init__(title=f"Set Cost for {item_name}")
-        self.parent_view = parent_view
-        self.setting_key = setting_key
-        self.cost_input = discord.ui.TextInput(label="Cost in KOTH points", placeholder="e.g., 100", min_length=1)
-        self.add_item(self.cost_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        try:
-            cost = int(self.cost_input.value); assert cost >= 0
-        except (ValueError, AssertionError):
-            return await interaction.response.send_message("Please enter a valid non-negative number.", ephemeral=True)
-        
-        await database.update_setting(interaction.guild.id, self.setting_key, cost)
-        await interaction.response.send_message(f"✅ Cost set to **{cost}** points.", ephemeral=True)
-        await self.parent_view.refresh_and_show(interaction, edit_original=True)
-
-class ShopSettingsView(BaseSettingsView):
-    def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
-        super().__init__(bot, parent_view)
-        self.message: Optional[discord.Message] = None
-
-    async def get_shop_embed(self, guild: discord.Guild):
-        settings = await database.get_all_settings(guild.id)
-        embed = discord.Embed(title="⚔️ Shop & Prices Settings", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        desc = "Configure the KOTH Points Shop prices and settings.\n\n"
-        desc += f"**Custom Role:** `{settings.get('custom_role_cost', 100)}` points.\n"
-        desc += f"**XP Boost:** `{settings.get('xp_boost_cost', 25)}` points.\n"
-        desc += f"**Priority Pass:** `{settings.get('priority_pass_cost', 50)}` points.\n"
-        desc += f"**Emoji Unlock:** `{settings.get('emoji_unlock_cost', 100)}` points."
-        embed.description = desc
-        return embed
-
-    @discord.ui.button(label="Set Custom Role Cost", style=discord.ButtonStyle.secondary, row=0)
-    async def set_role_cost(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ShopCostModal(self, "Custom Role", "custom_role_cost"))
-
-    @discord.ui.button(label="Set XP Boost Cost", style=discord.ButtonStyle.secondary, row=0)
-    async def set_xp_boost_cost(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ShopCostModal(self, "XP Boost", "xp_boost_cost"))
-
-    @discord.ui.button(label="Set Priority Pass Cost", style=discord.ButtonStyle.secondary, row=1)
-    async def set_pass_cost(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ShopCostModal(self, "Priority Pass", "priority_pass_cost"))
-
-    @discord.ui.button(label="Set Emoji Unlock Cost", style=discord.ButtonStyle.secondary, row=1)
-    async def set_emoji_cost(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ShopCostModal(self, "Emoji Unlock", "emoji_unlock_cost"))
-
 class GenericSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView, title: str, items: list):
         super().__init__(bot, parent_view)
@@ -561,7 +507,6 @@ class GenericSettingsView(BaseSettingsView):
             self.add_item(item)
 
     async def get_embed(self, guild: discord.Guild):
-        # This method can be expanded to show the current settings in the embed
         embed = discord.Embed(
             title=self.title,
             description=f"Configure the settings for {self.title.lower()}.",
@@ -569,7 +514,6 @@ class GenericSettingsView(BaseSettingsView):
         )
         return embed
 
-# --- Main Cog ---
 class SettingsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot

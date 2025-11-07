@@ -31,7 +31,6 @@ async def initialize_database():
             CREATE TABLE IF NOT EXISTS guild_settings (
                 verification_channel_id INTEGER, unverified_role_id INTEGER, member_role_id INTEGER,
                 verification_message_id INTEGER, admin_role_ids TEXT, mod_role_ids TEXT,
-                mod_chat_channel_id INTEGER, temp_vc_hub_id INTEGER, temp_vc_category_id INTEGER,
                 submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
                 review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0,
                 ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1

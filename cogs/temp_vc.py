@@ -228,11 +228,6 @@ class TempVCCog(commands.Cog, name="Temp VCs"):
     async def rename(self, interaction: discord.Interaction, name: str):
         channel = await self.vc_owner_check(interaction)
         if not channel: return
-        
-        # Prevent users from setting inappropriate names
-        bad_words = await database.get_bad_words(interaction.guild.id)
-        if any(word in name.lower() for word in bad_words):
-            return await interaction.response.send_message("❌ That name contains a forbidden word.", ephemeral=True)
             
         await channel.edit(name=name)
         await interaction.response.send_message(f"📝 Your channel has been renamed to **{name}**.", ephemeral=True)

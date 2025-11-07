@@ -45,7 +45,6 @@ async def initialize_database():
         await cursor.execute("CREATE TABLE IF NOT EXISTS temporary_vcs (channel_id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, text_channel_id INTEGER)")
         await cursor.execute("CREATE TABLE IF NOT EXISTS music_submissions ( submission_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, track_url TEXT NOT NULL, status TEXT NOT NULL, submitted_at TIMESTAMP NOT NULL, reviewer_id INTEGER, submission_type TEXT DEFAULT 'regular' )")
         await cursor.execute("CREATE TABLE IF NOT EXISTS ranking ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, xp INTEGER DEFAULT 0, PRIMARY KEY (user_id, guild_id) )")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS bad_words ( word_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, word TEXT NOT NULL )")
         await cursor.execute("CREATE TABLE IF NOT EXISTS verification_links ( state TEXT PRIMARY KEY, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', verified_account TEXT, server_name TEXT, bot_avatar_url TEXT )")
         await cursor.execute("CREATE TABLE IF NOT EXISTS gmail_verification ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, verification_code TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (user_id, guild_id) )")
         await cursor.execute("CREATE TABLE IF NOT EXISTS rank_rewards (guild_id INTEGER NOT NULL, rank_level INTEGER NOT NULL, role_id INTEGER NOT NULL, PRIMARY KEY (guild_id, rank_level))")
@@ -250,27 +249,6 @@ async def get_latest_pending_submission_id(guild_id: int, user_id: int, submissi
         )
         result = await cursor.fetchone()
         return result[0] if result else None
-
-# --- BAD WORD FILTER FUNCTIONS ---
-async def add_bad_word(guild_id, word):
-    conn = await get_db_connection()
-    await conn.execute("INSERT INTO bad_words (guild_id, word) VALUES (?, ?)", (guild_id, word.lower()))
-    await conn.commit()
-    return True
-
-async def remove_bad_word(guild_id, word):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("DELETE FROM bad_words WHERE guild_id = ? AND word = ?", (guild_id, word.lower()))
-        await conn.commit()
-        return cursor.rowcount > 0
-
-async def get_bad_words(guild_id):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT word FROM bad_words WHERE guild_id = ?", (guild_id,))
-        rows = await cursor.fetchall()
-        return [row[0] for row in rows]
 
 # --- RANKING SYSTEM FUNCTIONS ---
 async def get_user_xp(guild_id, user_id):

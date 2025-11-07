@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-from cogs.moderation import _mute_member, _issue_warning
+from cogs.moderation import _mute_member, _issue_warning, _ban_member
 import config
 import database
 
@@ -46,7 +46,7 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                     log.warning(f"Could not find member {task.get('target_id')} in guild {guild.id}.")
                 else:
                     try:
-                        if mod_action == 'ban': await guild.ban(target, reason=reason)
+                        if mod_action == 'ban': await _ban_member(None, target, reason, moderator)
                         elif mod_action == 'kick': await guild.kick(target, reason=reason)
                         elif mod_action == 'warn': await _issue_warning(self.bot, target, moderator, reason)
                         elif mod_action == 'timeout':

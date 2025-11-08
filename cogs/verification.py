@@ -119,7 +119,7 @@ class FreeVerificationSelect(discord.ui.Select):
             captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
             await interaction.response.send_modal(CaptchaModal(captcha_text))
         
-        elif mode in ['twitch', 'youtube']:
+        elif mode == 'youtube':
             await interaction.response.defer(ephemeral=True) # Defer only for follow-up responses
             state = secrets.token_urlsafe(16)
             
@@ -133,18 +133,11 @@ class FreeVerificationSelect(discord.ui.Select):
 
             base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 
-            if mode == 'twitch':
-                client_id = os.getenv("TWITCH_CLIENT_ID")
-                redirect_uri = f"{base_url}/callback/twitch"
-                params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "user:read:email", "state": state}
-                auth_url = f"https://id.twitch.tv/oauth2/authorize?{urlencode(params)}"
-                button_label = "Verify with Twitch"
-            else: # mode == 'youtube'
-                client_id = os.getenv("YOUTUBE_CLIENT_ID")
-                redirect_uri = f"{base_url}/callback/youtube"
-                params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
-                auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-                button_label = "Verify with YouTube/Google"
+            client_id = os.getenv("YOUTUBE_CLIENT_ID")
+            redirect_uri = f"{base_url}/callback/youtube"
+            params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
+            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+            button_label = "Verify with Google"
 
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label=button_label, url=auth_url))
@@ -167,14 +160,13 @@ class VerificationButton(discord.ui.View):
         mode = await database.get_setting(interaction.guild.id, 'verification_mode') or 'free'
         
         if mode == 'free':
-            enabled_modes_str = await database.get_setting(interaction.guild.id, 'free_verification_modes') or 'captcha,twitch,youtube,gmail'
+            enabled_modes_str = await database.get_setting(interaction.guild.id, 'free_verification_modes') or 'captcha,youtube,gmail'
             enabled_modes = enabled_modes_str.split(',')
             
             options = []
             for m in enabled_modes:
                 if m == 'captcha': options.append(discord.SelectOption(label="Captcha Verification", value="captcha", emoji="⌨️"))
-                elif m == 'twitch': options.append(discord.SelectOption(label="Twitch Verification", value="twitch", emoji="🟣"))
-                elif m == 'youtube': options.append(discord.SelectOption(label="YouTube Verification", value="youtube", emoji="▶️"))
+                elif m == 'youtube': options.append(discord.SelectOption(label="Google Verification", value="youtube", emoji="▶️"))
                 elif m == 'gmail': options.append(discord.SelectOption(label="Gmail Verification", value="gmail", emoji="✉️"))
             
             if not options:
@@ -184,30 +176,23 @@ class VerificationButton(discord.ui.View):
             view.add_item(FreeVerificationSelect(options))
             await interaction.response.send_message("Please select a verification method from the menu:", view=view, ephemeral=True)
 
-        elif mode in ['captcha', 'twitch', 'youtube', 'gmail']:
+        elif mode in ['captcha', 'youtube', 'gmail']:
             # This is the original forced verification logic
             if mode == 'captcha':
                 captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                 await interaction.response.send_modal(CaptchaModal(captcha_text))
             
-            elif mode in ['twitch', 'youtube']:
+            elif mode == 'youtube':
                 state = secrets.token_urlsafe(16)
                 await database.create_verification_link(state, interaction.guild.id, interaction.user.id, interaction.guild.name, self.bot.user.display_avatar.url)
 
                 base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 
-                if mode == 'twitch':
-                    client_id = os.getenv("TWITCH_CLIENT_ID")
-                    redirect_uri = f"{base_url}/callback/twitch"
-                    params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "user:read:email", "state": state}
-                    auth_url = f"https://id.twitch.tv/oauth2/authorize?{urlencode(params)}"
-                    button_label = "Verify with Twitch"
-                else:
-                    client_id = os.getenv("YOUTUBE_CLIENT_ID")
-                    redirect_uri = f"{base_url}/callback/youtube"
-                    params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
-                    auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-                    button_label = "Verify with YouTube/Google"
+                client_id = os.getenv("YOUTUBE_CLIENT_ID")
+                redirect_uri = f"{base_url}/callback/youtube"
+                params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
+                auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+                button_label = "Verify with Google"
 
                 view = discord.ui.View()
                 view.add_item(discord.ui.Button(label=button_label, url=auth_url))

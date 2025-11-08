@@ -49,11 +49,6 @@ async def initialize_database():
         await cursor.execute("PRAGMA table_info(guild_settings)")
         settings_columns = [row[1] for row in await cursor.fetchall()]
 
-        await cursor.execute("PRAGMA table_info(channel_activity)")
-        activity_columns = [row[1] for row in await cursor.fetchall()]
-        if 'last_updated' not in activity_columns:
-            await cursor.execute("ALTER TABLE channel_activity ADD COLUMN last_updated TIMESTAMP")
-
         if 'warning_limit' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_limit INTEGER DEFAULT 3")
         if 'warning_action' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action TEXT DEFAULT 'mute'")
         if 'warning_action_duration' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action_duration INTEGER DEFAULT 60")
@@ -64,7 +59,7 @@ async def initialize_database():
         if 'ranking_system_enabled' not in settings_columns: 
             await cursor.execute("ALTER TABLE guild_settings ADD COLUMN ranking_system_enabled INTEGER DEFAULT 1")
         if 'free_verification_modes' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN free_verification_modes TEXT DEFAULT 'captcha,twitch,youtube,gmail'")
+            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN free_verification_modes TEXT DEFAULT 'captcha,youtube,gmail'")
 
         await cursor.execute("PRAGMA table_info(warnings)")
         warnings_columns = [row[1] for row in await cursor.fetchall()]
@@ -342,15 +337,3 @@ async def get_current_review(guild_id: int, submission_type: str = 'regular'):
         )
         result = await cursor.fetchone()
         return result[0] if result else None
-
-async def update_channel_activity(guild_id: int, user_id: int, channel_id: int, message_count: int = 0, voice_seconds: int = 0):
-    conn = await get_db_connection()
-    await conn.execute("""
-        INSERT INTO channel_activity (guild_id, user_id, channel_id, message_count, voice_seconds, last_updated)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(guild_id, user_id, channel_id) DO UPDATE SET
-        message_count = message_count + excluded.message_count,
-        voice_seconds = voice_seconds + excluded.voice_seconds,
-        last_updated = CURRENT_TIMESTAMP
-    """, (guild_id, user_id, channel_id, message_count, voice_seconds))
-    await conn.commit()

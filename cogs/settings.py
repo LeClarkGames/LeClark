@@ -34,9 +34,8 @@ class VerificationModeSelect(discord.ui.Select):
     def __init__(self, parent_view: discord.ui.View):
         options = [
             discord.SelectOption(label="Captcha Verification", value="captcha", emoji="⌨️"),
-            discord.SelectOption(label="Twitch Verification", value="twitch"),
-            discord.SelectOption(label="YouTube Verification", value="youtube"),
-            discord.SelectOption(label="Gmail Verification", value="gmail", emoji="✉️"),
+            discord.SelectOption(label="Google Verification", value="google"),
+            discord.SelectOption(label="Mail Verification", value="mail", emoji="✉️"),
         ]
         super().__init__(placeholder="Select the one and only forced verification method...", min_values=1, max_values=1, options=options)
         self.parent_view = parent_view
@@ -178,7 +177,7 @@ class VerificationSettingsView(BaseSettingsView):
     async def get_verification_embed(self, guild: discord.Guild):
         settings = await database.get_all_settings(guild.id)
         mode = settings.get('verification_mode', 'free')
-        enabled_methods = settings.get('free_verification_modes', 'captcha,twitch,youtube,gmail').split(',')
+        enabled_methods = settings.get('free_verification_modes', 'captcha,google,mail').split(',')
         
         embed = discord.Embed(title="✅ Verification Settings", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
         embed.add_field(name="Verification Type", value=f"`{'Free Verification' if mode == 'free' else 'Forced Verification'}`", inline=False)
@@ -226,9 +225,8 @@ class VerificationSettingsView(BaseSettingsView):
 class FreeVerificationToggleSelect(discord.ui.Select):
     def __init__(self, parent_view: "VerificationSettingsView"):
         options = [
-            discord.SelectOption(label="Twitch Verification", value="twitch"),
-            discord.SelectOption(label="YouTube Verification", value="youtube"),
-            discord.SelectOption(label="Gmail Verification", value="gmail", emoji="✉️"),
+            discord.SelectOption(label="Google Verification", value="google"),
+            discord.SelectOption(label="Mail Verification", value="mail", emoji="✉️"),
             discord.SelectOption(label="Captcha Verification", value="captcha", emoji="⌨️"),
         ]
         super().__init__(placeholder="Select a method to toggle...", min_values=1, max_values=1, options=options)
@@ -236,7 +234,7 @@ class FreeVerificationToggleSelect(discord.ui.Select):
         
     async def callback(self, interaction: discord.Interaction):
         mode = self.values[0]
-        modes_str = await database.get_setting(interaction.guild.id, 'free_verification_modes') or "captcha,twitch,youtube,gmail"
+        modes_str = await database.get_setting(interaction.guild.id, 'free_verification_modes') or "captcha,google,mail"
         modes = modes_str.split(',')
         
         if mode in modes:
@@ -452,7 +450,7 @@ class SettingsMainView(BaseSettingsView):
         # New Verification section summary
         verification_mode = settings_data.get('verification_mode', 'free')
         if verification_mode == 'free':
-            modes = settings_data.get('free_verification_modes', 'captcha,twitch,youtube,gmail').split(',')
+            modes = settings_data.get('free_verification_modes', 'captcha,google,mail').split(',')
             mode_text = "Free"
             methods = ", ".join([m.capitalize() for m in modes])
             embed.add_field(name="Verification", value=f"**Type:** `{mode_text}`\n**Methods:** `{methods}`\n**Channel:** {f_ch('verification_channel_id')}", inline=False)

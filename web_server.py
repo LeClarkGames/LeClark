@@ -34,10 +34,8 @@ web_cache = {}
 CACHE_EXPIRATION = 120
 
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
-TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
-YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID")
-YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET")
+GOOGLE_CLIENT_ID = os.getenv("google_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("google_CLIENT_SECRET")
 DB_FILE = "bot_database.db"
 
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
@@ -45,8 +43,7 @@ DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = f"{APP_BASE_URL}/callback"
 DISCORD_API_BASE_URL = "https://discord.com/api"
 
-TWITCH_REDIRECT_URI = f"{APP_BASE_URL}/callback/twitch"
-YOUTUBE_REDIRECT_URI = f"{APP_BASE_URL}/callback/youtube"
+GOOGLE_REDIRECT_URI = f"{APP_BASE_URL}/callback/google"
 
 from functools import wraps
 
@@ -223,7 +220,6 @@ async def panel_widgets(guild_id: int):
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         regular_widget_url=f"{widget_url_base}?type=regular",
-        koth_widget_url=f"{widget_url_base}?type=koth",
         access_level=access_level
     )
 
@@ -442,37 +438,12 @@ async def websocket_endpoint():
     finally:
         await ws_manager.unregister(guild_id, ws_conn)
 
-@app.route('/callback/twitch')
-async def callback_twitch():
-    auth_code, state = request.args.get('code'), request.args.get('state')
-    if not auth_code or not state: return "Error: Missing authorization code or state.", 400
-    token_url = "https://id.twitch.tv/oauth2/token"
-    token_params = {"client_id": TWITCH_CLIENT_ID, "client_secret": TWITCH_CLIENT_SECRET, "code": auth_code, "grant_type": "authorization_code", "redirect_uri": TWITCH_REDIRECT_URI}
-    async with httpx.AsyncClient() as client: response = await client.post(token_url, params=token_params)
-    token_data = response.json()
-    if 'access_token' not in token_data: return "Error: Could not retrieve access token from Twitch.", 400
-    access_token = token_data['access_token']
-    user_url = "https://api.twitch.tv/helix/users"
-    headers = {"Authorization": f"Bearer {access_token}", "Client-Id": TWITCH_CLIENT_ID}
-    async with httpx.AsyncClient() as client: user_response = await client.get(user_url, headers=headers)
-    user_data = user_response.json()
-    if not user_data.get('data'): return "Error: Could not retrieve user data from Twitch.", 400
-    account_name = user_data['data'][0]['login']
-    try:
-        template_data = await get_verification_data(state)
-        async with aiosqlite.connect(DB_FILE) as conn:
-            await conn.execute("UPDATE verification_links SET status = 'verified', verified_account = ? WHERE state = ? AND status = 'pending'", (account_name, state))
-            await conn.commit()
-        return await render_template("success.html", account_name=account_name, **template_data)
-    except Exception as e:
-        print(f"Database error during Twitch callback: {e}"); return "An internal server error occurred.", 500
-
-@app.route('/callback/youtube')
-async def callback_youtube():
+@app.route('/callback/google')
+async def callback_google():
     auth_code, state = request.args.get('code'), request.args.get('state')
     if not auth_code or not state: return "Error: Missing authorization code or state.", 400
     token_url = "https://oauth2.googleapis.com/token"
-    token_params = {"client_id": YOUTUBE_CLIENT_ID, "client_secret": YOUTUBE_CLIENT_SECRET, "code": auth_code, "grant_type": "authorization_code", "redirect_uri": YOUTUBE_REDIRECT_URI}
+    token_params = {"client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, "code": auth_code, "grant_type": "authorization_code", "redirect_uri": GOOGLE_REDIRECT_URI}
     async with httpx.AsyncClient() as client: response = await client.post(token_url, data=token_params)
     token_data = response.json()
     if 'access_token' not in token_data: return "Error: Could not retrieve access token from Google.", 400
@@ -490,7 +461,7 @@ async def callback_youtube():
             await conn.commit()
         return await render_template("success.html", account_name=account_name, **template_data)
     except Exception as e:
-        print(f"Database error during YouTube callback: {e}"); return "An internal server error occurred.", 500
+        print(f"Database error during google callback: {e}"); return "An internal server error occurred.", 500
 
 @app.route('/api/v1/actions/run-setup/<int:guild_id>', methods=['POST'])
 @login_required

@@ -23,12 +23,7 @@ async def get_panel_embed_and_view(guild: discord.Guild, bot: commands.Bot):
 
     embed = discord.Embed(title=title, description=desc, color=embed_color)
     
-    view_map = {
-        'closed': SubmissionViewClosed,
-        'open': SubmissionViewOpen,
-    }
-    view_class = view_map.get(status, SubmissionViewClosed)
-    view = view_class(bot)
+    view = SubmissionView(bot, status)
     
     return embed, view
 
@@ -88,61 +83,76 @@ class SubmissionBaseView(discord.ui.View):
                 except discord.NotFound:
                     log.warning(f"Failed to update panel for guild {interaction.guild.id}, message not found.")
 
-class SubmissionViewClosed(SubmissionBaseView):
-    @discord.ui.button(label="Start Submissions", style=discord.ButtonStyle.success, custom_id="sub_start_regular")
-    async def start_submissions(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
-        await interaction.response.defer()
-        self.cog.regular_session_reviewed_count[interaction.guild.id] = 0
-        await database.update_setting(interaction.guild.id, 'submission_status', 'open')
-        await self._update_panel(interaction)
-        sub_channel_id = await database.get_setting(interaction.guild.id, 'submission_channel_id')
-        if sub_channel_id and (channel := self.bot.get_channel(sub_channel_id)):
-            await channel.send("📢 @everyone Submissions are now **OPEN**! Please send your audio files here.\n📌 **ONLY MP3/WAV | DO NOT SEND ANY LINKS**")
-        await interaction.followup.send("✅ Submissions are now open.", ephemeral=True)
+class SubmissionView(SubmissionBaseView):
+    def __init__(self, bot: commands.Bot, status: str):
+        super().__init__(bot)
+        self.cog = bot.get_cog("Submissions")
 
-    @discord.ui.button(label="📊 Statistics", style=discord.ButtonStyle.secondary, custom_id="sub_stats_regular")
-    async def statistics(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await utils.has_mod_role(interaction.user): return await interaction.response.send_message("❌ Mods/Admins only.", ephemeral=True)
-        await interaction.response.defer(ephemeral=True)
-        reviewed_count = await database.get_total_reviewed_count(interaction.guild.id, 'regular')
-        embed = discord.Embed(title="📊 Regular Submission Statistics (All-Time)", description=f"A total of **{reviewed_count}** tracks have been permanently reviewed in this server.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        await interaction.followup.send(embed=embed)
-
-class SubmissionViewOpen(SubmissionBaseView):
-    @discord.ui.button(label="▶️ Play the Queue", style=discord.ButtonStyle.primary, custom_id="sub_play_regular")
-    async def play_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await utils.has_mod_role(interaction.user): return await interaction.response.send_message("❌ Mods/Admins only.", ephemeral=True)
-        next_track = await database.get_next_submission(interaction.guild.id, submission_type='regular')
-        if not next_track: return await interaction.response.send_message("The submission queue is empty!", ephemeral=True)
+        if status == 'open':
+            self.add_item(self.PlayQueueButton())
+            self.add_item(self.StopSubmissionsButton())
+        else:
+            self.add_item(self.StartSubmissionsButton())
         
-        sub_id, user_id, url = next_track
-        await database.update_submission_status(sub_id, "reviewing", interaction.user.id)
-        user = interaction.guild.get_member(user_id)
-        embed = discord.Embed(title="🎵 Track for Review", description=f"Submitted by: {user.mention if user else 'N/A'}", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        view = ReviewItemView(self.bot, sub_id, interaction.guild.id)
-        await interaction.response.send_message(embed=embed, content=url, view=view)
+        self.add_item(self.StatisticsButton())
+    
+    class StartSubmissionsButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="Start Submissions", style=discord.ButtonStyle.success, custom_id="sub_start_regular")
 
-    @discord.ui.button(label="⏹️ Stop Submissions", style=discord.ButtonStyle.danger, custom_id="sub_stop_regular")
-    async def stop_submissions(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
-        await interaction.response.defer()
-        session_reviewed_count = self.cog.regular_session_reviewed_count.get(interaction.guild.id, 0)
-        await database.clear_session_submissions(interaction.guild.id, 'regular')
-        await database.update_setting(interaction.guild.id, 'submission_status', 'closed')
-        await self._update_panel(interaction)
-        sub_channel_id = await database.get_setting(interaction.guild.id, 'submission_channel_id')
-        if sub_channel_id and (channel := self.bot.get_channel(sub_channel_id)):
-            await channel.send("Submissions are now **CLOSED**! Thanks to everyone who sent in their tracks.")
-        await interaction.followup.send(f"✅ Session closed. A total of **{session_reviewed_count}** tracks were reviewed in this session.", ephemeral=True)
+        async def callback(self, interaction: discord.Interaction):
+            if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
+            await interaction.response.defer()
+            self.view.cog.regular_session_reviewed_count[interaction.guild.id] = 0
+            await database.update_setting(interaction.guild.id, 'submission_status', 'open')
+            await self.view._update_panel(interaction)
+            sub_channel_id = await database.get_setting(interaction.guild.id, 'submission_channel_id')
+            if sub_channel_id and (channel := self.view.bot.get_channel(sub_channel_id)):
+                await channel.send("📢 @everyone Submissions are now **OPEN**! Please send your audio files here.\n📌 **ONLY MP3/WAV | DO NOT SEND ANY LINKS**")
+            await interaction.followup.send("✅ Submissions are now open.", ephemeral=True)
 
-    @discord.ui.button(label="📊 Statistics", style=discord.ButtonStyle.secondary, custom_id="sub_stats_regular_open")
-    async def statistics(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await utils.has_mod_role(interaction.user): return await interaction.response.send_message("❌ Mods/Admins only.", ephemeral=True)
-        await interaction.response.defer(ephemeral=True)
-        reviewed_count = await database.get_total_reviewed_count(interaction.guild.id, 'regular')
-        embed = discord.Embed(title="📊 Regular Submission Statistics (All-Time)", description=f"A total of **{reviewed_count}** tracks have been permanently reviewed in this server.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-        await interaction.followup.send(embed=embed)
+    class PlayQueueButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="▶️ Play the Queue", style=discord.ButtonStyle.primary, custom_id="sub_play_regular")
+
+        async def callback(self, interaction: discord.Interaction):
+            if not await utils.has_mod_role(interaction.user): return await interaction.response.send_message("❌ Mods/Admins only.", ephemeral=True)
+            next_track = await database.get_next_submission(interaction.guild.id, submission_type='regular')
+            if not next_track: return await interaction.response.send_message("The submission queue is empty!", ephemeral=True)
+            
+            sub_id, user_id, url = next_track
+            await database.update_submission_status(sub_id, "reviewing", interaction.user.id)
+            user = interaction.guild.get_member(user_id)
+            embed = discord.Embed(title="🎵 Track for Review", description=f"Submitted by: {user.mention if user else 'N/A'}", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
+            view = ReviewItemView(self.view.bot, sub_id, interaction.guild.id)
+            await interaction.response.send_message(embed=embed, content=url, view=view)
+
+    class StopSubmissionsButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="⏹️ Stop Submissions", style=discord.ButtonStyle.danger, custom_id="sub_stop_regular")
+
+        async def callback(self, interaction: discord.Interaction):
+            if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
+            await interaction.response.defer()
+            session_reviewed_count = self.view.cog.regular_session_reviewed_count.get(interaction.guild.id, 0)
+            await database.clear_session_submissions(interaction.guild.id, 'regular')
+            await database.update_setting(interaction.guild.id, 'submission_status', 'closed')
+            await self.view._update_panel(interaction)
+            sub_channel_id = await database.get_setting(interaction.guild.id, 'submission_channel_id')
+            if sub_channel_id and (channel := self.view.bot.get_channel(sub_channel_id)):
+                await channel.send("Submissions are now **CLOSED**! Thanks to everyone who sent in their tracks.")
+            await interaction.followup.send(f"✅ Session closed. A total of **{session_reviewed_count}** tracks were reviewed in this session.", ephemeral=True)
+
+    class StatisticsButton(discord.ui.Button):
+        def __init__(self):
+            super().__init__(label="📊 Statistics", style=discord.ButtonStyle.secondary, custom_id="sub_stats_regular")
+
+        async def callback(self, interaction: discord.Interaction):
+            if not await utils.has_mod_role(interaction.user): return await interaction.response.send_message("❌ Mods/Admins only.", ephemeral=True)
+            await interaction.response.defer(ephemeral=True)
+            reviewed_count = await database.get_total_reviewed_count(interaction.guild.id, 'regular')
+            embed = discord.Embed(title="📊 Regular Submission Statistics (All-Time)", description=f"A total of **{reviewed_count}** tracks have been permanently reviewed in this server.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
+            await interaction.followup.send(embed=embed)
 
 class SubmissionsCog(commands.Cog, name="Submissions"):
     def __init__(self, bot: commands.Bot):
@@ -232,6 +242,27 @@ class SubmissionsCog(commands.Cog, name="Submissions"):
                         await self._broadcast_full_update(message.guild.id)
 
                     break
+    
+    async def post_panel(self, channel: discord.TextChannel):
+        """Posts the submissions panel to the specified channel."""
+        try:
+            # Try to delete the old panel message if it exists
+            if old_panel := await self.get_panel_message(channel.guild):
+                try: await old_panel.delete()
+                except (discord.Forbidden, discord.NotFound): pass
+            
+            embed, view = await get_panel_embed_and_view(channel.guild, self.bot)
+            panel_message = await channel.send(embed=embed, view=view)
+            
+            await database.update_setting(channel.guild.id, 'review_panel_message_id', panel_message.id)
+            await database.update_setting(channel.guild.id, 'submission_status', 'closed')
+
+            return True, f"Submission panel has been posted in {channel.mention}."
+        except discord.Forbidden:
+            return False, f"Bot lacks permission to send messages in {channel.mention}."
+        except Exception as e:
+            log.error(f"Error in panel setup (submission): {e}")
+            return False, "An internal error occurred."
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(SubmissionsCog(bot))

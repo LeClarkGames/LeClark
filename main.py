@@ -10,15 +10,21 @@ import config
 from web_server import app
 from cogs.verification import VerificationButton
 from cogs.submissions import (
-    SubmissionViewClosed,
-    SubmissionViewOpen
+    SubmissionView
 )
 
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN_TEST")
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)-8s] %(name)-12s: %(message)s", datefmt="%Y-m-d %H:%M:%S")
 log = logging.getLogger(__name__)
+
+APP_ENV = os.getenv("APP_ENV", "development")
+log.info(f"Running in {APP_ENV} mode.")
+
+if APP_ENV == "production":
+    TOKEN = os.getenv("BOT_TOKEN_MAIN")
+else:
+    TOKEN = os.getenv("BOT_TOKEN_TEST")
 
 class MyBot(commands.Bot):
     def __init__(self, *, intents: discord.Intents):
@@ -36,8 +42,7 @@ class MyBot(commands.Bot):
         await database.initialize_database()
         
         self.add_view(VerificationButton(bot=self))
-        self.add_view(SubmissionViewClosed(self))
-        self.add_view(SubmissionViewOpen(self))
+        self.add_view(SubmissionView(self))
         log.info("Registered persistent UI views.")
 
         cogs_to_load = [

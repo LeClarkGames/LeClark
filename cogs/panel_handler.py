@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-from cogs.moderation import _mute_member, _issue_warning, _ban_member
 import config
 import database
 
@@ -37,6 +36,12 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                     self.bot.action_queue.task_done()
                     return
 
+                mod_cog = self.bot.get_cog("Moderation")
+                if not mod_cog:
+                    log.error("Moderation cog not found, cannot process panel action.")
+                    self.bot.action_queue.task_done()
+                    return
+
                 target = guild.get_member(int(task.get('target_id')))
                 reason = task.get('reason', 'No reason.') + f" - By {moderator.display_name} via Web Panel"
                 mod_action = task.get('mod_action')
@@ -45,12 +50,12 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                     log.warning(f"Could not find member {task.get('target_id')} in guild {guild.id}.")
                 else:
                     try:
-                        if mod_action == 'ban': await _ban_member(None, target, reason, moderator)
+                        if mod_action == 'ban': await mod_cog.ban_member(None, target, reason, moderator)
                         elif mod_action == 'kick': await guild.kick(target, reason=reason)
-                        elif mod_action == 'warn': await _issue_warning(self.bot, target, moderator, reason)
+                        elif mod_action == 'warn': await mod_cog.issue_warning(self.bot, target, moderator, reason)
                         elif mod_action == 'timeout':
                             duration = int(task.get('duration', 10))
-                            await _mute_member(None, target, duration, reason, moderator)
+                            await mod_cog.mute_member(None, target, duration, reason, moderator)
                     except discord.Forbidden:
                         log.error(f"Missing permissions to {mod_action} member {target.id} in guild {guild.id}.")
 

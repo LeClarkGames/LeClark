@@ -23,54 +23,56 @@ async def get_db_connection():
         return None
 
 async def initialize_database():
-    """Initializes and updates the database schema if needed."""
+    """Initializes and updates the database schema using PRAGMA user_version."""
     conn = await get_db_connection()
     if not conn: return
+    
     async with conn.cursor() as cursor:
-        await cursor.execute("""
-            CREATE TABLE IF NOT EXISTS guild_settings (
-                verification_channel_id INTEGER, unverified_role_id INTEGER, member_role_id INTEGER,
-                verification_message_id INTEGER, admin_role_ids TEXT, mod_role_ids TEXT,
-                submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
-                review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0,
-                ranking_system_enabled INTEGER DEFAULT 1, submissions_system_enabled INTEGER DEFAULT 1
-            )
-        """)
-        await cursor.execute("CREATE TABLE IF NOT EXISTS warnings (warning_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, moderator_id INTEGER NOT NULL, reason TEXT, issued_at TIMESTAMP NOT NULL, log_message_id INTEGER)")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS temporary_vcs (channel_id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, text_channel_id INTEGER)")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS music_submissions ( submission_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, track_url TEXT NOT NULL, status TEXT NOT NULL, submitted_at TIMESTAMP NOT NULL, reviewer_id INTEGER, submission_type TEXT DEFAULT 'regular' )")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS ranking ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, xp INTEGER DEFAULT 0, PRIMARY KEY (user_id, guild_id) )")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS verification_links ( state TEXT PRIMARY KEY, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', verified_account TEXT, server_name TEXT, bot_avatar_url TEXT )")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS gmail_verification ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, verification_code TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (user_id, guild_id) )")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS rank_rewards (guild_id INTEGER NOT NULL, rank_level INTEGER NOT NULL, role_id INTEGER NOT NULL, PRIMARY KEY (guild_id, rank_level))")
-        await cursor.execute("CREATE TABLE IF NOT EXISTS widget_tokens (token TEXT PRIMARY KEY, guild_id INTEGER NOT NULL UNIQUE)")
+        await cursor.execute("PRAGMA user_version")
+        current_version = (await cursor.fetchone())[0]
+        
+        log.info(f"Current database schema version: {current_version}")
 
-        # --- Schema Updates ---
-        await cursor.execute("PRAGMA table_info(guild_settings)")
-        settings_columns = [row[1] for row in await cursor.fetchall()]
+        if current_version < 1:
+            log.info("Running schema migration v1: Initial table creation...")
+            await cursor.execute("""
+                CREATE TABLE IF NOT EXISTS guild_settings (
+                    guild_id INTEGER PRIMARY KEY,
+                    verification_channel_id INTEGER, unverified_role_id INTEGER, member_role_id INTEGER,
+                    verification_message_id INTEGER, admin_role_ids TEXT, mod_role_ids TEXT,
+                    submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
+                    review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0
+                )
+            """)
+            await cursor.execute("CREATE TABLE IF NOT EXISTS warnings (warning_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, moderator_id INTEGER NOT NULL, reason TEXT, issued_at TIMESTAMP NOT NULL, log_message_id INTEGER)")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS temporary_vcs (channel_id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, text_channel_id INTEGER)")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS music_submissions ( submission_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, track_url TEXT NOT NULL, status TEXT NOT NULL, submitted_at TIMESTAMP NOT NULL, reviewer_id INTEGER, submission_type TEXT DEFAULT 'regular' )")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS ranking ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, xp INTEGER DEFAULT 0, PRIMARY KEY (user_id, guild_id) )")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS verification_links ( state TEXT PRIMARY KEY, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', verified_account TEXT, server_name TEXT, bot_avatar_url TEXT )")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS gmail_verification ( user_id INTEGER NOT NULL, guild_id INTEGER NOT NULL, verification_code TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (user_id, guild_id) )")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS rank_rewards (guild_id INTEGER NOT NULL, rank_level INTEGER NOT NULL, role_id INTEGER NOT NULL, PRIMARY KEY (guild_id, rank_level))")
+            await cursor.execute("CREATE TABLE IF NOT EXISTS widget_tokens (token TEXT PRIMARY KEY, guild_id INTEGER NOT NULL UNIQUE)")
+            await cursor.execute("PRAGMA user_version = 1")
+            current_version = 1
 
-        if 'warning_limit' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_limit INTEGER DEFAULT 3")
-        if 'warning_action' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action TEXT DEFAULT 'mute'")
-        if 'warning_action_duration' not in settings_columns: await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action_duration INTEGER DEFAULT 60")
-        if 'submissions_system_enabled' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN submissions_system_enabled INTEGER DEFAULT 1")
-        if 'temp_vc_system_enabled' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN temp_vc_system_enabled INTEGER DEFAULT 1")
-        if 'ranking_system_enabled' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN ranking_system_enabled INTEGER DEFAULT 1")
-        if 'free_verification_modes' not in settings_columns: 
-            await cursor.execute("ALTER TABLE guild_settings ADD COLUMN free_verification_modes TEXT DEFAULT 'captcha,youtube,gmail'")
-
-        await cursor.execute("PRAGMA table_info(warnings)")
-        warnings_columns = [row[1] for row in await cursor.fetchall()]
-        if 'moderator_id' not in warnings_columns: await cursor.execute("ALTER TABLE warnings ADD COLUMN moderator_id INTEGER NOT NULL DEFAULT 0")
-        if 'reason' not in warnings_columns: await cursor.execute("ALTER TABLE warnings ADD COLUMN reason TEXT")
-        if 'issued_at' not in warnings_columns: await cursor.execute("ALTER TABLE warnings ADD COLUMN issued_at TIMESTAMP")
+        if current_version < 2:
+            log.info("Running schema migration v2: Adding guild_settings columns...")
+            try:
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_limit INTEGER DEFAULT 3")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action TEXT DEFAULT 'mute'")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN warning_action_duration INTEGER DEFAULT 60")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN submissions_system_enabled INTEGER DEFAULT 1")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN temp_vc_system_enabled INTEGER DEFAULT 1")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN ranking_system_enabled INTEGER DEFAULT 1")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN free_verification_modes TEXT DEFAULT 'captcha,youtube,gmail'")
+                await cursor.execute("PRAGMA user_version = 2")
+                current_version = 2
+            except aiosqlite.OperationalError as e:
+                log.error(f"Failed to run schema v2 migration. Columns might exist. Error: {e}")
 
     await conn.commit()
-    log.info("Database tables initialized/updated successfully.")
+    log.info(f"Database tables initialized/updated successfully. Now at schema v{current_version}.")
 
-# --- SETTINGS FUNCTIONS ---
 async def get_setting(guild_id, setting_name):
     conn = await get_db_connection()
     async with conn.cursor() as cursor:
@@ -93,7 +95,6 @@ async def get_all_settings(guild_id):
         columns = [description[0] for description in cursor.description]
         return dict(zip(columns, row))
 
-# --- RANK REWARD FUNCTIONS ---
 async def set_rank_reward(guild_id: int, rank_level: int, role_id: int):
     conn = await get_db_connection()
     await conn.execute("INSERT INTO rank_rewards (guild_id, rank_level, role_id) VALUES (?, ?, ?) ON CONFLICT(guild_id, rank_level) DO UPDATE SET role_id = excluded.role_id", (guild_id, rank_level, role_id))

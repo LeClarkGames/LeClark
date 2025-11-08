@@ -32,16 +32,25 @@ CACHE_DURATION_SECONDS = 300
 web_cache = {}
 CACHE_EXPIRATION = 120
 
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
+APP_ENV = os.getenv("APP_ENV", "development")
+
+if APP_ENV == "production":
+    APP_BASE_URL = os.getenv("APP_BASE_URL")
+    DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
+    DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
+    app.secret_key = os.getenv("QUART_SECRET_KEY")
+else:
+    APP_BASE_URL = os.getenv("APP_BASE_URL_TEST")
+    DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID_TEST")
+    DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET_TEST")
+    app.secret_key = os.getenv("QUART_SECRET_KEY_TEST")
+
 GOOGLE_CLIENT_ID = os.getenv("google_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("google_CLIENT_SECRET")
 DB_FILE = "bot_database.db"
 
-DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
-DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = f"{APP_BASE_URL}/callback"
-DISCORD_API_BASE_URL = "https://discord.com/api"
-
+DISCORD_API_BASE_URL = "https.discord.com/api"
 GOOGLE_REDIRECT_URI = f"{APP_BASE_URL}/callback/google"
 
 from functools import wraps
@@ -464,7 +473,7 @@ async def callback_google():
 @app.route('/api/v1/actions/run-setup/<int:guild_id>', methods=['POST'])
 @login_required
 async def api_run_setup(guild_id: int):
-    """API endpoint to *directly* run setup commands."""
+    """API endpoint to trigger cog-based setup commands."""
     form = await request.form
     setup_type = form.get('setup_type')
     bot = app.bot_instance
@@ -475,55 +484,29 @@ async def api_run_setup(guild_id: int):
 
     if setup_type == 'verification':
         channel_id = await database.get_setting(guild.id, 'verification_channel_id')
-        if not channel_id:
-            return jsonify({"error": "Verification channel not set in bot settings."}), 400
+        cog = bot.get_cog("Verification")
+        if not channel_id: return jsonify({"error": "Verification channel not set in bot settings."}), 400
+        if not cog: return jsonify({"error": "Verification cog not found."}), 500
         
-        channel = guild.get_channel(channel_id)
-        if not channel:
-            return jsonify({"error": "Verification channel not found."}), 404
-        
-        try:
-            embed = discord.Embed(title="Server Verification", description="To gain access to the server, click the button below and complete the required action.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-            view = VerificationButton(bot)
-            await channel.send(embed=embed, view=view)
-            return jsonify({"message": f"Verification message sent to {channel.mention}!"}), 200
-        except discord.Forbidden:
-            return jsonify({"error": f"Bot lacks permission to send messages in {channel.mention}."}), 403
-        except Exception as e:
-            log.error(f"Error in panel setup (verification): {e}")
-            return jsonify({"error": "An internal error occurred."}), 500
-
     elif setup_type == 'submission':
         channel_id = await database.get_setting(guild.id, 'review_channel_id')
-        if not channel_id:
-            return jsonify({"error": "Review channel not set in bot settings."}), 400
+        cog = bot.get_cog("Submissions")
+        if not channel_id: return jsonify({"error": "Review channel not set in bot settings."}), 400
+        if not cog: return jsonify({"error": "Submissions cog not found."}), 500
         
-        channel = guild.get_channel(channel_id)
-        if not channel:
-            return jsonify({"error": "Review channel not found."}), 404
-
-        try:
-            # Try to delete the old panel message if it exists
-            if submissions_cog := bot.get_cog("Submissions"):
-                if old_panel := await submissions_cog.get_panel_message(guild):
-                    try: await old_panel.delete()
-                    except (discord.Forbidden, discord.NotFound): pass
-            
-            embed, view = await get_panel_embed_and_view(guild, bot)
-            panel_message = await channel.send(embed=embed, view=view)
-            
-            await database.update_setting(guild.id, 'review_panel_message_id', panel_message.id)
-            await database.update_setting(guild.id, 'submission_status', 'closed')
-
-            return jsonify({"message": f"Submission panel has been posted in {channel.mention}."}), 200
-        except discord.Forbidden:
-            return jsonify({"error": f"Bot lacks permission to send messages in {channel.mention}."}), 403
-        except Exception as e:
-            log.error(f"Error in panel setup (submission): {e}")
-            return jsonify({"error": "An internal error occurred."}), 500
-
     else:
         return jsonify({"error": "Invalid setup type."}), 400
+
+    channel = guild.get_channel(channel_id)
+    if not channel:
+        return jsonify({"error": "The configured channel was not found."}), 404
+    
+    success, message = await cog.post_panel(channel)
+    
+    if success:
+        return jsonify({"message": message}), 200
+    else:
+        return jsonify({"error": message}), 500
 
 @app.route('/api/v1/actions/send-message/<int:guild_id>', methods=['POST'])
 @login_required

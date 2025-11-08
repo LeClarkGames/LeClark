@@ -204,7 +204,6 @@ class VerificationButton(discord.ui.View):
             else:
                 await interaction.response.send_message("❌ Unknown verification mode.", ephemeral=True)
 
-# --- The Main Cog for Verification ---
 class VerificationCog(commands.Cog, name="Verification"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -303,6 +302,19 @@ class VerificationCog(commands.Cog, name="Verification"):
                     log.error(f"Failed to assign unverified role to {member} in guild {member.guild.id}. Missing permissions.")
             else:
                 log.error(f"Could not find the configured unverified role ({unverified_role_id}) in guild {member.guild.id}.")
+
+    async def post_panel(self, channel: discord.TextChannel):
+        """Posts the verification panel to the specified channel."""
+        try:
+            embed = discord.Embed(title="Server Verification", description="To gain access to the server, click the button below and complete the required action.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
+            view = VerificationButton(self.bot)
+            await channel.send(embed=embed, view=view)
+            return True, f"Verification message sent to {channel.mention}!"
+        except discord.Forbidden:
+            return False, f"Bot lacks permission to send messages in {channel.mention}."
+        except Exception as e:
+            log.error(f"Error in panel setup (verification): {e}")
+            return False, "An internal error occurred."
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(VerificationCog(bot))

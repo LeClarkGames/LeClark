@@ -36,10 +36,8 @@ class MyBot(commands.Bot):
         await database.initialize_database()
         
         self.add_view(VerificationButton(bot=self))
-        # --- ADD THIS BLOCK ---
         self.add_view(SubmissionViewClosed(self))
         self.add_view(SubmissionViewOpen(self))
-        # --- END ADD ---
         log.info("Registered persistent UI views.")
 
         cogs_to_load = [

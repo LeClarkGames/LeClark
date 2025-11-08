@@ -246,7 +246,6 @@ class SubmissionsCog(commands.Cog, name="Submissions"):
     async def post_panel(self, channel: discord.TextChannel):
         """Posts the submissions panel to the specified channel."""
         try:
-            # Try to delete the old panel message if it exists
             if old_panel := await self.get_panel_message(channel.guild):
                 try: await old_panel.delete()
                 except (discord.Forbidden, discord.NotFound): pass

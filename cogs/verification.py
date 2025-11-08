@@ -133,7 +133,7 @@ class FreeVerificationSelect(discord.ui.Select):
 
             base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 
-            client_id = os.getenv("YOUTUBE_CLIENT_ID")
+            client_id = os.getenv("GOOGLE_CLIENT_ID")
             redirect_uri = f"{base_url}/callback/youtube"
             params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
@@ -177,7 +177,6 @@ class VerificationButton(discord.ui.View):
             await interaction.response.send_message("Please select a verification method from the menu:", view=view, ephemeral=True)
 
         elif mode in ['captcha', 'youtube', 'gmail']:
-            # This is the original forced verification logic
             if mode == 'captcha':
                 captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                 await interaction.response.send_modal(CaptchaModal(captcha_text))
@@ -188,7 +187,7 @@ class VerificationButton(discord.ui.View):
 
                 base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
 
-                client_id = os.getenv("YOUTUBE_CLIENT_ID")
+                client_id = os.getenv("GOOGLE_CLIENT_ID")
                 redirect_uri = f"{base_url}/callback/youtube"
                 params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
                 auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"

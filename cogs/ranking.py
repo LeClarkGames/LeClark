@@ -153,11 +153,6 @@ class RankingCog(commands.Cog, name="Ranking"):
         embed = discord.Embed(title=f"Rank for {target_member.display_name}", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
         embed.set_thumbnail(url=target_member.display_avatar.url)
 
-        # Check for and display active XP boost
-        active_boost = await database.get_user_buff(interaction.guild.id, target_member.id, "xp_boost")
-        if active_boost:
-            embed.description = "🚀 **2x XP Boost is ACTIVE!**"
-
         embed.add_field(name="Server Rank", value=f"#{rank_pos}", inline=True)
         embed.add_field(name="Level", value=rank_name, inline=True)
         embed.add_field(name="Total XP", value=f"{user_xp}", inline=True)

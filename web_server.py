@@ -191,12 +191,6 @@ async def panel_home(guild_id: int):
     access_level = await get_user_access_level(guild, int(session.get('user_id')))
 
     # Fetch data for dashboard cards
-    xp_leaderboard_raw = await database.get_leaderboard(guild.id, limit=5)
-    xp_leaderboard_users = []
-    for user_id_xp, xp in xp_leaderboard_raw:
-        user_data = await fetch_user_data(user_id_xp)
-        xp_leaderboard_users.append({"name": user_data['name'], "score": xp})
-
     last_member_joined = sorted(guild.members, key=lambda m: m.joined_at, reverse=True)[0]
     online_members = sum(1 for m in guild.members if m.status != discord.Status.offline)
     
@@ -209,54 +203,6 @@ async def panel_home(guild_id: int):
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
-        access_level=access_level
-    )
-
-@app.route('/panel/<int:guild_id>/statistics')
-@login_required
-async def panel_statistics(guild_id: int):
-    """Renders the statistics page."""
-    guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
-    top_voice_raw = await database.get_top_voice_channels(guild_id, limit=5)
-
-    # Fetch data for stats cards
-    top_users_raw = await database.get_top_users_overall(guild_id, limit=10)
-    top_text_raw = await database.get_top_text_channels(guild_id, limit=5)
-    top_voice_raw = await database.get_top_voice_channels(guild_id, limit=5)
-
-    top_today_raw = await database.get_top_users_today(guild_id, limit=5)
-    top_today = []
-    for user_id_today, msg_count_today, vc_sec_today in top_today_raw:
-        user_info_today = await fetch_user_data(user_id_today)
-        top_today.append({'name': user_info_today['name'], 'message_count': msg_count_today, 'voice_seconds': vc_sec_today})
-
-    top_users = []
-    for user_id_stats, msg_count, vc_sec in top_users_raw:
-        user_info_db = await fetch_user_data(user_id_stats)
-        top_users.append({'name': user_info_db['name'], 'message_count': msg_count, 'voice_seconds': vc_sec})
-
-    # --- Start of new/modified code ---
-    top_text = []
-    for channel_id, count in top_text_raw:
-        channel = guild.get_channel(channel_id)
-        channel_name = channel.name if channel else "Deleted Channel"
-        top_text.append({'name': channel_name, 'message_count': count})
-
-    top_voice = []
-    for channel_id, secs in top_voice_raw:
-        channel = guild.get_channel(channel_id)
-        channel_name = channel.name if channel else "Deleted Channel"
-        top_voice.append({'name': channel_name, 'voice_seconds': secs})
-    # --- End of new/modified code ---
-
-    return await render_template(
-        "panel_statistics.html",
-        guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
-        user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
-        top_users=top_users, top_text_channels=top_text, top_voice_channels=top_voice,
-        top_active_today=top_today,
         access_level=access_level
     )
 
@@ -545,102 +491,6 @@ async def callback_youtube():
         return await render_template("success.html", account_name=account_name, **template_data)
     except Exception as e:
         print(f"Database error during YouTube callback: {e}"); return "An internal server error occurred.", 500
-
-@app.route('/dashboard/<int:guild_id>')
-async def activity_dashboard(guild_id: int):
-    bot = app.bot_instance
-    guild = bot.get_guild(guild_id)
-    if not guild:
-        return "<h1>Guild not found.</h1>", 404
-
-    top_users_raw = await database.get_top_users_overall(guild_id)
-    top_text_raw = await database.get_top_text_channels(guild_id)
-    top_voice_raw = await database.get_top_voice_channels(guild_id)
-
-    top_users = []
-    for user_id, msg_count, vc_sec in top_users_raw:
-        user_info = await fetch_user_data(user_id)
-        top_users.append({'name': user_info['name'], 'message_count': msg_count, 'voice_seconds': vc_sec})
-
-    top_text = [{'name': (guild.get_channel(cid) or "Unknown Channel").name, 'message_count': count} for cid, count in top_text_raw]
-    top_voice = [{'name': (guild.get_channel(cid) or "Unknown Channel").name, 'voice_seconds': secs} for cid, secs in top_voice_raw]
-
-    rendered_template = await render_template(
-        "dashboard.html",
-        guild_id=guild_id,
-        guild_name=guild.name,
-        guild_icon_url=guild.icon.url if guild.icon else None,
-        top_users=top_users,
-        top_text_channels=top_text,
-        top_voice_channels=top_voice
-    )
-    
-    response = await make_response(rendered_template)
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
-
-@app.route('/api/user_search/<int:guild_id>')
-async def api_user_search(guild_id: int):
-    query = request.args.get('query', '').lower()
-    if not query:
-        response = jsonify({"error": "No search query provided."})
-        response.status_code = 400
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    bot = app.bot_instance
-    guild = bot.get_guild(guild_id)
-    if not guild:
-        response = jsonify({"error": "Guild not found."})
-        response.status_code = 404
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    found_member = None
-    # --- MODIFICATION: Exclude bots from the search ---
-    if query.isdigit():
-        member = guild.get_member(int(query))
-        if member and not member.bot:
-            found_member = member
-    else:
-        if '#' in query:
-            name, discrim = query.split('#')
-            member = discord.utils.get(guild.members, name=name, discriminator=discrim)
-            if member and not member.bot:
-                found_member = member
-        if not found_member:
-            # This lambda now checks `not m.bot`
-            found_member = discord.utils.find(lambda m: query in m.display_name.lower() and not m.bot, guild.members)
-
-    if not found_member:
-        response = jsonify({"error": "User not found in this server."})
-        response.status_code = 404
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-
-    # Fetch all the user's data
-    activity = await database.get_user_activity(guild_id, found_member.id)
-    channel_activity_raw = await database.get_user_channel_activity(guild_id, found_member.id)
-
-    channel_activity = {}
-    for cid, msgs, secs in channel_activity_raw:
-        channel = guild.get_channel(cid)
-        if channel:
-            channel_activity[channel.name] = {'messages': msgs, 'voice_seconds': secs}
-
-    final_response = jsonify({
-        "name": found_member.display_name,
-        "avatar_url": found_member.display_avatar.url,
-        "total_messages": activity.get('message_count', 0) if activity else 0,
-        "total_voice_seconds": activity.get('voice_seconds', 0) if activity else 0,
-        "channel_activity": channel_activity
-    })
-    final_response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    final_response.headers['Pragma'] = 'no-cache'
-    final_response.headers['Expires'] = '0'
-    return final_response
 
 @app.route('/api/v1/actions/run-setup/<int:guild_id>', methods=['POST'])
 @login_required

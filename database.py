@@ -243,7 +243,6 @@ async def get_latest_pending_submission_id(guild_id: int, user_id: int, submissi
         result = await cursor.fetchone()
         return result[0] if result else None
 
-# --- RANKING SYSTEM FUNCTIONS ---
 async def get_user_xp(guild_id, user_id):
     """Gets just the user's XP."""
     conn = await get_db_connection()
@@ -275,7 +274,6 @@ async def get_leaderboard(guild_id, limit=10):
         await cursor.execute("SELECT user_id, xp FROM ranking WHERE guild_id = ? ORDER BY xp DESC LIMIT ?", (guild_id, limit))
         return await cursor.fetchall()
 
-# --- OAUTH & GMAIL VERIFICATION FUNCTIONS ---
 async def create_verification_link(state, guild_id, user_id, server_name, bot_avatar_url):
     conn = await get_db_connection()
     await conn.execute("INSERT INTO verification_links (state, guild_id, user_id, server_name, bot_avatar_url) VALUES (?, ?, ?, ?, ?)", (state, guild_id, user_id, server_name, bot_avatar_url))
@@ -356,50 +354,3 @@ async def update_channel_activity(guild_id: int, user_id: int, channel_id: int, 
         last_updated = CURRENT_TIMESTAMP
     """, (guild_id, user_id, channel_id, message_count, voice_seconds))
     await conn.commit()
-
-async def get_user_channel_activity(guild_id: int, user_id: int):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT channel_id, message_count, voice_seconds FROM channel_activity WHERE guild_id = ? AND user_id = ?", (guild_id, user_id))
-        return await cursor.fetchall()
-
-# REPLACE this function
-async def get_top_users_overall(guild_id: int, limit: int = 5):
-    """Gets top users by summing their activity across all channels."""
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT user_id, SUM(message_count), SUM(voice_seconds) 
-            FROM channel_activity 
-            WHERE guild_id = ? 
-            GROUP BY user_id 
-            ORDER BY SUM(message_count) DESC, SUM(voice_seconds) DESC 
-            LIMIT ?
-        """, (guild_id, limit))
-        return await cursor.fetchall()
-
-async def get_top_text_channels(guild_id: int, limit: int = 5):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT channel_id, SUM(message_count) as total_msgs FROM channel_activity WHERE guild_id = ? GROUP BY channel_id ORDER BY total_msgs DESC LIMIT ?", (guild_id, limit))
-        return await cursor.fetchall()
-
-async def get_top_voice_channels(guild_id: int, limit: int = 5):
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT channel_id, SUM(voice_seconds) as total_voice FROM channel_activity WHERE guild_id = ? GROUP BY channel_id ORDER BY total_voice DESC LIMIT ?", (guild_id, limit))
-        return await cursor.fetchall()
-    
-async def get_top_users_today(guild_id: int, limit: int = 5):
-    """Gets top users by activity in the last 24 hours."""
-    conn = await get_db_connection()
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT user_id, SUM(message_count), SUM(voice_seconds) 
-            FROM channel_activity 
-            WHERE guild_id = ? AND last_updated >= datetime('now', '-1 day')
-            GROUP BY user_id 
-            ORDER BY SUM(message_count) DESC, SUM(voice_seconds) DESC 
-            LIMIT ?
-        """, (guild_id, limit))
-        return await cursor.fetchall()

@@ -1,4 +1,4 @@
-from quart import Quart, request, render_template, abort, websocket, flash, redirect, url_for, jsonify, make_response, session
+from quart import Quart, request, render_template, websocket, redirect, url_for, jsonify, session
 import discord
 import os
 import httpx
@@ -20,7 +20,7 @@ from cogs.submissions import get_panel_embed_and_view
 
 load_dotenv()
 
-app = Quart(__name__, static_folder='static', static_url_path='/static')
+app = Quart(__name__, static_folder='static', static_url_path='/static', template_folder='web')
 log = logging.getLogger(__name__)
 
 app.secret_key = os.getenv("QUART_SECRET_KEY")

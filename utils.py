@@ -38,8 +38,6 @@ async def get_log_mentions(guild_id: int) -> str:
     if not all_role_ids: return ""
     return " ".join([f"<@&{role_id}>" for role_id in all_role_ids])
 
-# In utils.py
-
 def has_permission(level="mod"):
     async def predicate(interaction: discord.Interaction) -> bool:
         if not isinstance(interaction.user, discord.Member):

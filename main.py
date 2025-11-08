@@ -43,8 +43,7 @@ class MyBot(commands.Bot):
         cogs_to_load = [
             "cogs.settings", "cogs.moderation",
             "cogs.verification", "cogs.temp_vc", 
-            "cogs.submissions", "cogs.tasks",
-            "cogs.ranking", "cogs.utility", "cogs.panel_handler"
+            "cogs.submissions", "cogs.panel_handler"
         ]
         for cog in cogs_to_load:
             try:

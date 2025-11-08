@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import asyncio
 import logging
 import json
-import secrets
 import utils
 from collections import defaultdict
 from urllib.parse import urlencode
@@ -87,7 +86,6 @@ class WebSocketManager:
 ws_manager = WebSocketManager()
 app.ws_manager = ws_manager
 
-# --- HELPER FUNCTIONS ---
 async def get_verification_data(state: str):
     try:
         async with aiosqlite.connect(DB_FILE) as conn:

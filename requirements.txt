@@ -5,3 +5,4 @@ quart
 httpx
 aiosmtplib
 google-api-python-client
+PyNaCl

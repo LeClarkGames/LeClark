@@ -42,7 +42,6 @@ class MyBot(commands.Bot):
         await database.initialize_database()
         
         self.add_view(VerificationButton(bot=self))
-        self.add_view(SubmissionView(self))
         log.info("Registered persistent UI views.")
 
         cogs_to_load = [

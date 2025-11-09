@@ -46,5 +46,14 @@
             </div>
         </div>
     </div>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </body>
 </html>

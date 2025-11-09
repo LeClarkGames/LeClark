@@ -17,5 +17,14 @@
             <a href="{{ url_for('login') }}" class="button" style="margin-top: 1.5rem; background-color: #5865F2; border: none;">Login with Discord</a>
         </div>
     </div>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -51,6 +51,13 @@
                 status.style.visibility = 'hidden';
             }, 2000);
         }
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
     </script>
 </body>
 </html>

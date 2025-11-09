@@ -15,5 +15,14 @@
             <p>You can now close this window and return to <strong>{{ server_name }}</strong>.</p>
         </div>
     </div>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </body>
 </html>

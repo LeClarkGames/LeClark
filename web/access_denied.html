@@ -14,5 +14,14 @@
             <p class="subtitle" style="font-size: 0.9rem; margin-top: 1.5rem;">If you believe this is an error, please contact the server owner.</p>
         </div>
     </div>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </body>
 </html>

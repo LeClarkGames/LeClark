@@ -523,5 +523,24 @@ class SettingsCog(commands.Cog):
         embed = await view.get_settings_embed(interaction.guild)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
+    @app_commands.command(name="panel", description="Get the link to the web control panel.")
+    @utils.has_permission("admin")
+    async def panel_link(self, interaction: discord.Interaction):
+        """Sends an ephemeral link to the web panel."""
+        
+        # We get the APP_BASE_URL from your config.py
+        link = f"{config.APP_BASE_URL}/panel/{interaction.guild.id}"
+        
+        embed = discord.Embed(
+            title="🌐 Web Panel Link",
+            description=f"Click the button below to open the staff control panel for **{interaction.guild.name}**.",
+            color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"]
+        )
+        
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Open Panel", url=link, emoji="🔗"))
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(SettingsCog(bot))

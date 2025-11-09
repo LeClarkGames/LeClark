@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ guild_name }} - Mod Menu</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         .form-group { display: flex; flex-direction: column; text-align: left; }
@@ -32,6 +32,9 @@
             <img src="{{ user_avatar_url }}" alt="User Avatar">
             <span>{{ user_name }}</span>
             <span class="user-access-level">({{ access_level }})</span>
+
+            <button id="theme-toggle-btn">☀️</button>
+
             <a href="{{ url_for('logout', guild_id=guild_id) }}" class="logout-button">(Logout)</a>
         </div>
     </header>
@@ -169,6 +172,28 @@
     <script>
         const guildId = '{{ guild_id }}';
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const body = document.body;
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme === 'light') {
+            body.classList.add('light-mode');
+            themeToggleBtn.textContent = '🌙';
+        } else {
+            themeToggleBtn.textContent = '☀️';
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            
+            if (body.classList.contains('light-mode')) {
+                themeToggleBtn.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeToggleBtn.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
         
         async function apiPost(url, formData) {
             const response = await fetch(url, {

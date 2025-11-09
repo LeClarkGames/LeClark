@@ -1,63 +1,79 @@
 /* --- Google Font Imports --- */
-@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&family=Teko:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Arimo:wght@400;700&display=swap');
 
-/* --- Background Grid Animation --- */
-@keyframes move-grid {
+/* --- NEW: Animated Gradient Keyframes --- */
+@keyframes animatedGradient {
     0% { background-position: 0% 50%; }
-    100% { background-position: 100% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* --- NEW Color & Theme Variables --- */
+/* --- Color & Theme Variables --- */
 :root {
+    /* DARK MODE (DEFAULT) */
     --background-color: #0D0D0D;
     --primary-ui-color: #1A1A1A;
-    --accent-color: #FFD700; /* New Yellow */
+    --accent-color: #FFD700; /* Yellow */
     --text-color: #F2F2F2;
     --secondary-text-color: #a0a0a0;
-    --border-color: rgba(255, 215, 0, 0.4); /* New Yellow Border */
+    --border-color: rgba(255, 215, 0, 0.4); /* Yellow Border */
+    --card-bg: rgba(26, 26, 26, 0.85);
+    --bar-bg: rgba(26, 26, 26, 0.85);
 }
 
-/* --- NEW Base Body Style --- */
+body.light-mode {
+    /* LIGHT MODE */
+    --background-color: #F4F7F6;
+    --primary-ui-color: #FFFFFF;
+    --accent-color: #E6A000; /* Darker Yellow for contrast */
+    --text-color: #0D0D0D;
+    --secondary-text-color: #5c5c5c;
+    --border-color: rgba(0, 0, 0, 0.1); /* Light Black Border */
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --bar-bg: rgba(255, 255, 255, 0.85);
+}
+
+/* --- Base Body Style --- */
 body {
     background-color: var(--background-color);
-    background-image:
-        linear-gradient(var(--accent-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--accent-color) 1px, transparent 1px);
-    background-size: 50px 50px;
-    background-position: center center;
-    font-family: 'Raleway', sans-serif; /* New Font */
+    background-image: none; /* GRID IS GONE */
+    font-family: 'Arimo', sans-serif;
     color: var(--text-color);
     min-height: 100vh;
     margin: 0;
     box-sizing: border-box;
-    animation: move-grid 20s linear infinite;
-    
-    /* Padding for new Top/Bottom Bars */
     padding-top: 80px;
     padding-bottom: 80px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- NEW Main Content Container --- */
+body.light-mode {
+    /* NEW: Base 44-inspired soft *animated* gradient */
+    background: linear-gradient(120deg, #d9e8ff, #f0f4f8, #ffe8d9, #d9e8ff);
+    background-size: 300% 300%;
+    animation: animatedGradient 15s ease infinite;
+}
+
+
+/* --- Main Content Container --- */
 .main-content {
     display: block;
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 2rem; /* Add some side padding */
+    padding: 0 2rem;
 }
 
-/* --- Container for Login/Leaderboard Pages --- */
 .container {
     width: 100%;
     max-width: 800px;
     z-index: 10;
-    /* This centers the .container on pages that use it */
     margin: 0 auto;
 }
 
-/* --- General Components (Kept) --- */
+/* --- General Components --- */
 .card {
-    background: rgba(26, 26, 26, 0.85);
+    background: var(--card-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 4px;
@@ -65,6 +81,11 @@ body {
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-color);
     text-align: center;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+body.light-mode .card {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .header {
@@ -84,19 +105,21 @@ body {
     border: 2px solid var(--accent-color);
 }
 
-/* --- NEW Font Headings --- */
+/* --- Font Headings --- */
 h1, h3 {
-    font-family: 'Teko', sans-serif;
+    font-family: 'Anton', sans-serif;
     margin: 0;
     font-size: 2.2rem;
     font-weight: 700;
     text-transform: uppercase;
+    color: var(--text-color);
 }
 
 h2, h4 {
-    font-family: 'Teko', sans-serif;
+    font-family: 'Anton', sans-serif;
     text-transform: uppercase;
     font-weight: 700;
+    color: var(--text-color);
 }
 
 .subtitle, p {
@@ -105,7 +128,7 @@ h2, h4 {
     margin: 0.5rem 0 0 0;
 }
 
-/* --- Leaderboard Styles (Kept) --- */
+/* --- Leaderboard Styles --- */
 .entry {
     display: flex;
     align-items: center;
@@ -117,9 +140,14 @@ h2, h4 {
 .entry:not(:last-child) {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-/* FIXED: Changed hover to new accent color */
+body.light-mode .entry:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
 .entry:hover {
     background-color: rgba(255, 215, 0, 0.1);
+}
+body.light-mode .entry:hover {
+    background-color: rgba(230, 160, 0, 0.1);
 }
 .rank {
     font-size: 1.8rem;
@@ -141,6 +169,7 @@ h2, h4 {
     font-size: 1.2rem;
     font-weight: 700;
     margin: 0;
+    color: var(--text-color);
 }
 .user-info .details {
     font-size: 0.9rem;
@@ -158,7 +187,7 @@ h2, h4 {
     margin-right: 5px;
 }
 
-/* --- Dashboard Stats (Kept) --- */
+/* --- Dashboard Stats --- */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -172,6 +201,9 @@ h2, h4 {
     border-radius: 4px;
     border-left: 3px solid var(--accent-color);
 }
+body.light-mode .stat-item {
+    background: rgba(0,0,0,0.05);
+}
 .stat-label {
     font-size: 14px;
     color: var(--secondary-text-color);
@@ -180,14 +212,18 @@ h2, h4 {
 .stat-value {
     font-size: 32px;
     font-weight: 700;
+    color: var(--text-color);
 }
 .stat-list { list-style: none; padding: 0; }
 .stat-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a33; }
+body.light-mode .stat-list li {
+    border-bottom: 1px solid var(--border-color);
+}
 .stat-list li:last-child { border-bottom: none; }
 .stat-list span { font-weight: 700; color: var(--accent-color); }
 
 
-/* --- Buttons (Kept) --- */
+/* --- Buttons --- */
 button, .button {
     width: 100%;
     padding: 15px;
@@ -203,16 +239,14 @@ button, .button {
     display: inline-block;
     text-align: center;
     text-transform: uppercase;
-    /* FIXED: Apply new heading font to buttons */
-    font-family: 'Teko', sans-serif;
+    font-family: 'Anton', sans-serif;
 }
 .approve-btn, button:hover, .button:hover {
     background-color: var(--accent-color);
-    /* FIXED: Change text color on hover for better contrast */
-    color: var(--background-color);
+    color: #0D0D0D; /* Always use dark text on yellow bg */
 }
 
-/* --- NEW LAYOUT STYLES --- */
+/* --- Layout Styles --- */
 .top-bar {
     display: flex;
     justify-content: space-between;
@@ -223,19 +257,21 @@ button, .button {
     left: 0;
     width: 100%;
     height: 60px;
-    background: rgba(26, 26, 26, 0.85); /* Matches card bg */
+    background: var(--bar-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
     z-index: 100;
-    box-sizing: border-box; /* Ensures padding doesn't break width */
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .top-bar .logo {
-    font-family: 'Teko', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     text-transform: uppercase;
+    color: var(--text-color);
 }
 
 .user-profile {
@@ -259,6 +295,16 @@ button, .button {
     margin-left: 1rem;
     font-size: 0.9rem;
 }
+#theme-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.4rem; /* Larger emoji */
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0.5rem 0 1rem;
+    width: auto; /* Override default button width */
+}
 
 .bottom-bar {
     display: flex;
@@ -270,16 +316,17 @@ button, .button {
     left: 0;
     width: 100%;
     height: 60px;
-    background: rgba(26, 26, 26, 0.85); /* Matches card bg */
+    background: var(--bar-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-color);
     z-index: 100;
-    box-sizing: border-box; /* Ensures padding doesn't break width */
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .bottom-bar a {
-    font-family: 'Teko', sans-serif;
+    font-family: 'Anton', sans-serif;
     text-decoration: none;
     color: var(--text-color);
     font-size: 1.2rem;
@@ -292,10 +339,10 @@ button, .button {
 
 .bottom-bar a:hover {
     background-color: var(--accent-color);
-    color: var(--background-color);
+    color: #0D0D0D; /* Always use dark text on yellow bg */
 }
 
 .bottom-bar a.active {
     background-color: var(--accent-color);
-    color: var(--background-color);
+    color: #0D0D0D; /* Always use dark text on yellow bg */
 }

@@ -24,8 +24,6 @@ load_dotenv()
 app = Quart(__name__, static_folder='static', static_url_path='/static', template_folder='web')
 log = logging.getLogger(__name__)
 
-app.secret_key = os.getenv("QUART_SECRET_KEY")
-
 user_cache = {}
 cache_lock = asyncio.Lock()
 CACHE_DURATION_SECONDS = 300

@@ -1,19 +1,18 @@
-import discord
-from discord.ext import commands
 import os
 import logging
-from dotenv import load_dotenv
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import discord
+from discord.ext import commands
 
 import database
 import config
 from web_server import app
 from cogs.verification import VerificationButton
-from cogs.submissions import (
-    SubmissionView
-)
-
-load_dotenv()
+from cogs.submissions import (SubmissionView)
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)-8s] %(name)-12s: %(message)s", datefmt="%Y-m-d %H:%M:%S")
 log = logging.getLogger(__name__)

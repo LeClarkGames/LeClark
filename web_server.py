@@ -40,7 +40,7 @@ GOOGLE_CLIENT_SECRET = config.GOOGLE_CLIENT_SECRET
 DB_FILE = "bot_database.db"
 
 DISCORD_REDIRECT_URI = f"{config.APP_BASE_URL}/callback"
-DISCORD_API_BASE_URL = "https.discord.com/api"
+DISCORD_API_BASE_URL = "https://discord.com/api"
 GOOGLE_REDIRECT_URI = f"{config.APP_BASE_URL}/callback/google"
 
 from functools import wraps

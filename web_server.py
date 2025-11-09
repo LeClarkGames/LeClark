@@ -19,8 +19,6 @@ from cogs.ranking import get_rank_info
 from cogs.verification import VerificationButton
 from cogs.submissions import get_panel_embed_and_view
 
-load_dotenv()
-
 app = Quart(__name__, static_folder='static', static_url_path='/static', template_folder='web')
 log = logging.getLogger(__name__)
 

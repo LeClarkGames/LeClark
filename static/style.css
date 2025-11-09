@@ -1,26 +1,23 @@
-/* --- NEW: Google Font Import for a sharper style --- */
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+/* --- Google Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&family=Teko:wght@400;600;700&display=swap');
 
-/* --- NEW: Animated Grid Background --- */
+/* --- Background Grid Animation --- */
 @keyframes move-grid {
     0% { background-position: 0% 50%; }
     100% { background-position: 100% 50%; }
 }
 
+/* --- NEW Color & Theme Variables --- */
 :root {
     --background-color: #0D0D0D;
     --primary-ui-color: #1A1A1A;
-    --accent-color: #E60023; /* Sharp Red */
+    --accent-color: #FFD700; /* New Yellow */
     --text-color: #F2F2F2;
     --secondary-text-color: #a0a0a0;
-    --border-color: rgba(230, 0, 35, 0.4);
+    --border-color: rgba(255, 215, 0, 0.4); /* New Yellow Border */
 }
 
-.main-content {
-    flex-grow: 1;
-    flex: 1;
-}
-
+/* --- NEW Base Body Style --- */
 body {
     background-color: var(--background-color);
     background-image:
@@ -28,29 +25,42 @@ body {
         linear-gradient(90deg, var(--accent-color) 1px, transparent 1px);
     background-size: 50px 50px;
     background-position: center center;
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Raleway', sans-serif; /* New Font */
     color: var(--text-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     margin: 0;
-    padding: 2rem;
     box-sizing: border-box;
     animation: move-grid 20s linear infinite;
+    
+    /* Padding for new Top/Bottom Bars */
+    padding-top: 80px;
+    padding-bottom: 80px;
 }
 
+/* --- NEW Main Content Container --- */
+.main-content {
+    display: block;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem; /* Add some side padding */
+}
+
+/* --- Container for Login/Leaderboard Pages --- */
 .container {
     width: 100%;
     max-width: 800px;
     z-index: 10;
+    /* This centers the .container on pages that use it */
+    margin: 0 auto;
 }
 
+/* --- General Components (Kept) --- */
 .card {
     background: rgba(26, 26, 26, 0.85);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-radius: 4px; /* Sharper corners */
+    border-radius: 4px;
     padding: 30px 40px;
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-color);
@@ -74,17 +84,17 @@ body {
     border: 2px solid var(--accent-color);
 }
 
-h1 {
+/* --- NEW Font Headings --- */
+h1, h3 {
+    font-family: 'Teko', sans-serif;
     margin: 0;
     font-size: 2.2rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
-h3 {
-    margin-top: 0;
-    border-bottom: 1px solid var(--accent-color);
-    padding-bottom: 10px;
+h2, h4 {
+    font-family: 'Teko', sans-serif;
     text-transform: uppercase;
     font-weight: 700;
 }
@@ -95,7 +105,7 @@ h3 {
     margin: 0.5rem 0 0 0;
 }
 
-/* --- Leaderboard Specific --- */
+/* --- Leaderboard Styles (Kept) --- */
 .entry {
     display: flex;
     align-items: center;
@@ -107,8 +117,9 @@ h3 {
 .entry:not(:last-child) {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+/* FIXED: Changed hover to new accent color */
 .entry:hover {
-    background-color: rgba(230, 0, 35, 0.1);
+    background-color: rgba(255, 215, 0, 0.1);
 }
 .rank {
     font-size: 1.8rem;
@@ -147,7 +158,7 @@ h3 {
     margin-right: 5px;
 }
 
-/* --- Dashboard & User Activity --- */
+/* --- Dashboard Stats (Kept) --- */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -170,25 +181,13 @@ h3 {
     font-size: 32px;
     font-weight: 700;
 }
-.search-bar { display: flex; margin-bottom: 2rem; }
-#userSearch {
-    flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 4px 0 0 4px;
-    border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: #fff;
-    font-family: 'Rajdhani', sans-serif;
-}
-#userSearchBtn {
-    padding: 12px 20px; font-size: 16px; border-radius: 0 4px 4px 0;
-    border: 1px solid var(--accent-color); background: var(--accent-color); color: #fff; cursor: pointer;
-    font-weight: 700;
-    text-transform: uppercase;
-}
 .stat-list { list-style: none; padding: 0; }
 .stat-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a33; }
 .stat-list li:last-child { border-bottom: none; }
 .stat-list span { font-weight: 700; color: var(--accent-color); }
-#userInfoCard { display: none; }
 
-/* --- Buttons and Forms --- */
+
+/* --- Buttons (Kept) --- */
 button, .button {
     width: 100%;
     padding: 15px;
@@ -204,8 +203,99 @@ button, .button {
     display: inline-block;
     text-align: center;
     text-transform: uppercase;
+    /* FIXED: Apply new heading font to buttons */
+    font-family: 'Teko', sans-serif;
 }
 .approve-btn, button:hover, .button:hover {
     background-color: var(--accent-color);
-    color: #fff;
+    /* FIXED: Change text color on hover for better contrast */
+    color: var(--background-color);
+}
+
+/* --- NEW LAYOUT STYLES --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(26, 26, 26, 0.85); /* Matches card bg */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 100;
+    box-sizing: border-box; /* Ensures padding doesn't break width */
+}
+
+.top-bar .logo {
+    font-family: 'Teko', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.user-profile img {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+}
+.user-profile .user-access-level {
+    font-size: 0.8rem;
+    color: var(--secondary-text-color);
+    font-weight: 700;
+}
+.user-profile .logout-button {
+    text-decoration: none;
+    color: var(--secondary-text-color);
+    margin-left: 1rem;
+    font-size: 0.9rem;
+}
+
+.bottom-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(26, 26, 26, 0.85); /* Matches card bg */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border-color);
+    z-index: 100;
+    box-sizing: border-box; /* Ensures padding doesn't break width */
+}
+
+.bottom-bar a {
+    font-family: 'Teko', sans-serif;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.bottom-bar a:hover {
+    background-color: var(--accent-color);
+    color: var(--background-color);
+}
+
+.bottom-bar a.active {
+    background-color: var(--accent-color);
+    color: var(--background-color);
 }

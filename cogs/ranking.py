@@ -12,7 +12,6 @@ import config
 
 log = logging.getLogger(__name__)
 
-# Rank requirements. The 'xp' is the total XP needed to achieve that rank.
 RANKS = {
     1: {"name": "Rank 1", "xp": 50},
     2: {"name": "Rank 2", "xp": 150},
@@ -23,7 +22,7 @@ RANKS = {
     7: {"name": "Rank 7", "xp": 1000},
     8: {"name": "Rank 8", "xp": 1200},
     9: {"name": "Rank 9", "xp": 1500},
-    10: {"name": "The Legend", "xp": 2000}, # Given a finite number for max rank
+    10: {"name": "The Legend", "xp": 2000}
 }
 
 def get_rank_from_xp(xp):
@@ -173,8 +172,7 @@ class RankingCog(commands.Cog, name="Ranking"):
             await interaction.followup.send("There is no one on the leaderboard yet!")
             return
             
-        base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-        link = f"{base_url}/leaderboard/{interaction.guild.id}"
+        link = f"{config.APP_BASE_URL}/leaderboard/{interaction.guild.id}"
         
         embed = discord.Embed(title=f"🏆 Leaderboard for {interaction.guild.name}", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
         description_lines = []

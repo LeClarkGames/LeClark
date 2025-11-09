@@ -15,9 +15,6 @@ import utils
 
 log = logging.getLogger(__name__)
 
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-
-# --- Helper function for sending emails ---
 async def send_verification_email(recipient_email: str, code: str):
     sender = os.getenv("GMAIL_ADDRESS")
     password = os.getenv("GMAIL_APP_PASSWORD")
@@ -131,10 +128,8 @@ class FreeVerificationSelect(discord.ui.Select):
                 interaction.client.user.display_avatar.url
             )
 
-            base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-
             client_id = os.getenv("GOOGLE_CLIENT_ID")
-            redirect_uri = f"{base_url}/callback/youtube"
+            redirect_uri = f"{config.APP_BASE_URL}/callback/youtube"
             params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
             auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
             button_label = "Verify with Google"
@@ -185,10 +180,8 @@ class VerificationButton(discord.ui.View):
                 state = secrets.token_urlsafe(16)
                 await database.create_verification_link(state, interaction.guild.id, interaction.user.id, interaction.guild.name, self.bot.user.display_avatar.url)
 
-                base_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-
                 client_id = os.getenv("GOOGLE_CLIENT_ID")
-                redirect_uri = f"{base_url}/callback/youtube"
+                redirect_uri = f"{config.APP_BASE_URL}/callback/youtube"
                 params = {"response_type": "code", "client_id": client_id, "redirect_uri": redirect_uri, "scope": "https://www.googleapis.com/auth/userinfo.profile", "state": state}
                 auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
                 button_label = "Verify with Google"

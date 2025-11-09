@@ -1,4 +1,4 @@
-from quart import Quart, request, render_template, websocket, redirect, url_for, jsonify, session
+from quart import Quart, request, render_template, websocket, redirect, url_for, jsonify, session, abort
 import discord
 import os
 import httpx
@@ -12,6 +12,7 @@ from collections import defaultdict
 from urllib.parse import urlencode
 import time
 import config
+import secrets
 
 import database
 from cogs.ranking import get_rank_info
@@ -32,26 +33,19 @@ CACHE_DURATION_SECONDS = 300
 web_cache = {}
 CACHE_EXPIRATION = 120
 
-APP_ENV = os.getenv("APP_ENV", "development")
+APP_ENV = config.APP_ENV
+APP_BASE_URL = config.APP_BASE_URL
+DISCORD_CLIENT_ID = config.DISCORD_CLIENT_ID
+DISCORD_CLIENT_SECRET = config.DISCORD_CLIENT_SECRET
+app.secret_key = config.QUART_SECRET_KEY
 
-if APP_ENV == "production":
-    APP_BASE_URL = os.getenv("APP_BASE_URL")
-    DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
-    DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
-    app.secret_key = os.getenv("QUART_SECRET_KEY")
-else:
-    APP_BASE_URL = os.getenv("APP_BASE_URL_TEST")
-    DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID_TEST")
-    DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET_TEST")
-    app.secret_key = os.getenv("QUART_SECRET_KEY_TEST")
-
-GOOGLE_CLIENT_ID = os.getenv("google_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("google_CLIENT_SECRET")
+GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = config.GOOGLE_CLIENT_SECRET
 DB_FILE = "bot_database.db"
 
-DISCORD_REDIRECT_URI = f"{APP_BASE_URL}/callback"
+DISCORD_REDIRECT_URI = f"{config.APP_BASE_URL}/callback"
 DISCORD_API_BASE_URL = "https.discord.com/api"
-GOOGLE_REDIRECT_URI = f"{APP_BASE_URL}/callback/google"
+GOOGLE_REDIRECT_URI = f"{config.APP_BASE_URL}/callback/google"
 
 from functools import wraps
 
@@ -64,7 +58,14 @@ def login_required(f):
         if not user_id or guild_id not in authorized_guilds:
             session['login_redirect_guild_id'] = guild_id
             return redirect(url_for('panel_login_page', guild_id=guild_id))
-        
+
+        if request.method == 'POST':
+            token_in_session = session.get('csrf_token')
+            token_in_header = request.headers.get('X-CSRF-Token')
+            
+            if not token_in_session or not token_in_header or not secrets.compare_digest(token_in_session, token_in_header):
+                return abort(403, "CSRF token validation failed.")
+
         return await f(guild_id, *args, **kwargs)
     return decorated_function
 
@@ -207,7 +208,8 @@ async def panel_home(guild_id: int):
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
-        access_level=access_level
+        access_level=access_level,
+        csrf_token=session.get('csrf_token')
     )
 
 @app.route('/panel/<int:guild_id>/widgets')
@@ -218,7 +220,6 @@ async def panel_widgets(guild_id: int):
     user_info = await fetch_user_data(int(session.get('user_id')))
     access_level = await get_user_access_level(guild, int(session.get('user_id')))
 
-    # Get the unique token for the guild's widgets
     token = await database.get_or_create_widget_token(guild_id)
     widget_url_base = f"{APP_BASE_URL}/widget/view/{token}"
 
@@ -227,7 +228,8 @@ async def panel_widgets(guild_id: int):
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         regular_widget_url=f"{widget_url_base}?type=regular",
-        access_level=access_level
+        access_level=access_level,
+        csrf_token=session.get('csrf_token')
     )
 
 @app.route('/panel/<int:guild_id>/mod-menu')
@@ -257,7 +259,8 @@ async def panel_mod_menu(guild_id: int):
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         access_level=access_level,
         admin_members=admin_members,
-        mod_members=mod_members
+        mod_members=mod_members,
+        csrf_token=session.get('csrf_token')
     )
 
 @app.route('/api/v1/actions/moderate/<int:guild_id>', methods=['POST'])
@@ -298,7 +301,7 @@ async def login():
 
 @app.route('/logout/<int:guild_id>')
 async def logout(guild_id: int):
-    session.clear() # Clears all session data
+    session.clear()
     return redirect(url_for('panel_home', guild_id=guild_id))
 
 @app.route('/callback')
@@ -331,24 +334,20 @@ async def callback():
     user_data = user_response.json()
     user_id = int(user_data['id'])
 
-    # --- Start of Authorization Check ---
     guild = app.bot_instance.get_guild(guild_id_to_check)
     if not guild:
         return "<h1>Error: The bot is not in the guild you're trying to access.</h1>", 403
 
     member = guild.get_member(user_id)
     if not member:
-        # The user is in the guild, but the bot's member cache might be incomplete.
-        # It's safer to deny access than to grant it incorrectly.
         return await render_template("access_denied.html", guild_name=guild.name)
 
     is_staff = await utils.has_mod_role(member)
 
     if not is_staff:
         return await render_template("access_denied.html", guild_name=guild.name)
-    # --- End of Authorization Check ---
 
-    # Store user info and authorization status in the session
+    session['csrf_token'] = secrets.token_hex(32)
     session['user_id'] = user_data['id']
     authorized_guilds = session.get('authorized_guilds', [])
     if guild_id_to_check not in authorized_guilds:
@@ -481,6 +480,10 @@ async def api_run_setup(guild_id: int):
     
     if not guild:
         return jsonify({"error": "Bot could not find this guild."}), 404
+    
+    moderator = guild.get_member(int(session.get('user_id')))
+    if not moderator or not await utils.has_admin_role(moderator):
+        return jsonify({"error": "You must be a Bot Admin to perform this action."}), 403
 
     if setup_type == 'verification':
         channel_id = await database.get_setting(guild.id, 'verification_channel_id')

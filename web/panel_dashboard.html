@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild_name }} - Staff Dashboard</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .leaderboard-card { grid-column: span 1; }
+        .stats-column { grid-column: span 1; display: flex; flex-direction: column; gap: 1.5rem; }
+    </style>
+</head>
+<body>
+    
+    <header class="top-bar">
+        <div class="logo">
+            LOGO
+        </div>
+        <div class="user-profile">
+            <img src="{{ user_avatar_url }}" alt="User Avatar">
+            <span>{{ user_name }}</span>
+            <span class="user-access-level">({{ access_level }})</span>
+            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="logout-button">(Logout)</a>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <h2>Dashboard</h2>
+        <div class="dashboard-grid">
+            <div class="card leaderboard-card">
+                <h3>XP Leaderboard</h3>
+                <ul class="stat-list">
+                    {% for user in xp_leaderboard %}
+                    <li>{{ user.name }}<span>{{ user.score }} XP</span></li>
+                    {% else %}
+                    <li>No XP data yet.</li>
+                    {% endfor %}
+                </ul>
+                <a href="{{ url_for('xp_leaderboard', guild_id=guild_id) }}" target="_blank" class="button" style="margin-top: 1rem;">Open in New Page</a>
+            </div>
+
+            <div class="stats-column">
+                <div class="card stat-item" style="margin: 0;">
+                    <div class="stat-label">Last Member Joined</div>
+                    <div class="stat-value">{{ last_member }}</div>
+                </div>
+                <div class="card stat-item" style="margin: 0;">
+                    <div class="stat-label">Users Online</div>
+                    <div class="stat-value">{{ online_count }}</div>
+                </div>
+                <div class="card stat-item" style="margin: 0;">
+                    <div class="stat-label">Member Count</div>
+                    <div class="stat-value">{{ member_count }}</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-bar">
+        <a href="{{ url_for('panel_home', guild_id=guild_id) }}" class="active">Dashboard</a>
+        <a href="{{ url_for('panel_widgets', guild_id=guild_id) }}">Widgets</a>
+        <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}">Mod Menu</a>
+    </nav>
+
+</body>
+</html>

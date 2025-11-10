@@ -10,7 +10,20 @@
         .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
         .leaderboard-card { grid-column: span 1; }
         .stats-column { grid-column: span 1; display: flex; flex-direction: column; gap: 1.5rem; }
+        .leaderboard-card { display: flex; flex-direction: column; }
+        .leaderboard-content-wrapper { display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; }
+        .leaderboard-content-wrapper .stat-list { flex-grow: 1; }
+        .leaderboard-content-wrapper .button { flex-shrink: 0; }
     </style>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </head>
 <body>
     
@@ -21,11 +34,16 @@
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
             <span>{{ user_name }}</span>
-            <span class="user-access-level">({{ access_level }})</span>
-            
-            <button id="theme-toggle-btn">☀️</button>
-            
-            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="logout-button">(Logout)</a>
+            <span class="access-badge">{{ access_level }} Access</span>
+
+            <button id="theme-toggle-btn" class="icon-button">☀️</button>
+
+            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="icon-button logout-button" aria-label="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px" height="22px">
+                    <path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5A1.5 1.5 0 007.5 20.25h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5A1.5 1.5 0 006 5.25z" clip-rule="evenodd" />
+                    <path d="M13.06 8.22a.75.75 0 011.06 0l3.75 3.75a.75.75 0 010 1.06l-3.75 3.75a.75.75 0 11-1.06-1.06l2.47-2.47H9.75a.75.75 0 010-1.5h5.78l-2.47-2.47a.75.75 0 010-1.06z" />
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -34,14 +52,16 @@
         <div class="dashboard-grid">
             <div class="card leaderboard-card">
                 <h3>XP Leaderboard</h3>
-                <ul class="stat-list">
-                    {% for user in xp_leaderboard %}
-                    <li>{{ user.name }}<span>{{ user.score }} XP</span></li>
-                    {% else %}
-                    <li>No XP data yet.</li>
-                    {% endfor %}
-                </ul>
-                <a href="{{ url_for('xp_leaderboard', guild_id=guild_id) }}" target="_blank" class="button" style="margin-top: 1rem;">Open in New Page</a>
+                <div class="leaderboard-content-wrapper">
+                    <ul class="stat-list">
+                        {% for user in xp_leaderboard %}
+                        <li>{{ user.name }}<span>{{ user.score }} XP</span></li>
+                        {% else %}
+                        <li>No XP data yet.</li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{{ url_for('xp_leaderboard', guild_id=guild_id) }}" target="_blank" class="button" style="margin-top: 1rem;">Open in New Page</a>
+                </div>
             </div>
 
             <div class="stats-column">
@@ -70,18 +90,13 @@
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const body = document.body;
-        const currentTheme = localStorage.getItem('theme');
-
-        if (currentTheme === 'light') {
-            body.classList.add('light-mode');
+        if (body.classList.contains('light-mode')) {
             themeToggleBtn.textContent = '🌙';
         } else {
             themeToggleBtn.textContent = '☀️';
         }
-
         themeToggleBtn.addEventListener('click', () => {
             body.classList.toggle('light-mode');
-            
             if (body.classList.contains('light-mode')) {
                 themeToggleBtn.textContent = '🌙';
                 localStorage.setItem('theme', 'light');

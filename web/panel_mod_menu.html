@@ -20,7 +20,28 @@
         .staff-list { list-style: none; padding: 0; text-align: left; }
         .staff-list li { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
         .staff-list img { width: 30px; height: 30px; border-radius: 50%; }
+        .modal-tab-btn { background-color: transparent; border: 1px solid var(--border-color); color: var(--secondary-text-color); }
+        .modal-tab-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: #FFFFFF; }
+        .modal-tab-content { display: none; }
+        .card-header-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .card-header-action .icon-button { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; padding: 5px; margin: 0; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .card-header-action .icon-button:hover { background-color: var(--accent-color); border-color: var(--accent-color); color: #FFFFFF; }
+        .clickable-list li { cursor: pointer; transition: background-color 0.2s; }
+        .clickable-list li:hover { background-color: rgba(255, 255, 255, 0.1); }
+        body.light-mode .clickable-list li:hover { background-color: rgba(88, 101, 242, 0.1); }
+        .search-results { border: 1px solid var(--border-color); border-radius: 4px; margin-top: 0.5rem; max-height: 150px; overflow-y: auto; }
+        .search-result-item { padding: 8px 12px; cursor: pointer; text-align: left; }
+        .search-result-item:hover { background-color: var(--accent-color); }
     </style>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </head>
 <body>
 
@@ -31,11 +52,16 @@
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
             <span>{{ user_name }}</span>
-            <span class="user-access-level">({{ access_level }})</span>
+            <span class="access-badge">{{ access_level }} Access</span>
 
-            <button id="theme-toggle-btn">☀️</button>
+            <button id="theme-toggle-btn" class="icon-button">☀️</button>
 
-            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="logout-button">(Logout)</a>
+            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="icon-button logout-button" aria-label="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px" height="22px">
+                    <path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5A1.5 1.5 0 007.5 20.25h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5A1.5 1.5 0 006 5.25z" clip-rule="evenodd" />
+                    <path d="M13.06 8.22a.75.75 0 011.06 0l3.75 3.75a.75.75 0 010 1.06l-3.75 3.75a.75.75 0 11-1.06-1.06l2.47-2.47H9.75a.75.75 0 010-1.5h5.78l-2.47-2.47a.75.75 0 010-1.06z" />
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -44,23 +70,22 @@
         
         <div class="form-grid">
             <div class="card">
+                <h3>Actions</h3>
+                <p class="subtitle" style="margin-bottom: 1.5rem;">Perform quick actions.</p>
+                <button id="open-message-modal-btn" class="button">Message via Bot</button>
+            </div>
+            
+            <div class="card">
                 <h3>Moderate User</h3>
                 <div class="form-group">
-                    <label for="target_id">User ID or Mention</label>
-                    <input type="text" id="target_id" class="input" required>
+                    <label for="search_user">Search for Member</label>
+                    <input type="text" id="search_user" class="input" placeholder="Start typing a name...">
+                    <div id="search-results-list" class="search-results">
+                        </div>
                 </div>
-                <div class="form-group">
-                    <label for="mod_action">Action</label>
-                    <select id="mod_action" class="input">
-                        <option value="warn">Warn</option>
-                        <option value="timeout">Timeout</option>
-                        <option value="kick">Kick</option>
-                        <option value="ban">Ban</option>
-                    </select>
-                </div>
-                <button id="take-action-btn" class="button" style="margin-top: 1.5rem;">Take Action</button>
                 <div id="mod-response"></div>
-            </div>
+                
+                </div>
 
             <div class="card">
                 <h3>Setup Panels & Resets</h3>
@@ -69,31 +94,6 @@
                 <button class="button setup-btn" style="margin-top: 1rem;" data-setup="submission">Setup Submissions</button>
                 <button class="button" id="reset-stuck-review-btn" style="margin-top: 1rem; background-color: #f0a000; border-color: #f0a000;">Reset Stuck Review</button>
                 <div id="setup-response"></div>
-            </div>
-
-            <div class="card" style="grid-column: 1 / -1;">
-                 <h3>Send Message via Bot</h3>
-                 <form id="send-message-form">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="channel_id">Channel ID</label>
-                            <input type="text" id="channel_id" name="channel_id" class="input" required>
-                        </div>
-                         <div class="form-group">
-                            <label for="is_embed">Message Type</label>
-                            <select id="is_embed" name="is_embed" class="input">
-                                <option value="false">Regular Message</option>
-                                <option value="true">Embed Message</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-top: 1.5rem;">
-                         <label for="message_content">Content (For Embed, use Title|Description)</label>
-                         <textarea id="message_content" name="message_content" class="input" rows="4" required></textarea>
-                    </div>
-                    <button type="submit" class="button" style="margin-top: 1.5rem;">Send Message</button>
-                 </form>
-                 <div id="send-response"></div>
             </div>
 
             <div class="card" style="grid-column: 1 / -1;">
@@ -106,40 +106,33 @@
             
             {% if access_level == 'Admin' %}
             <div class="card" style="grid-column: 1 / -1;">
-                <h3>Staff Management</h3>
-                <p class="subtitle">Assigns the first configured Admin/Mod role from the bot's settings.</p>
-                <div class="form-grid" style="margin-top: 1.5rem;">
-                    <div>
-                        <h4>Current Staff</h4>
-                        <ul class="staff-list">
-                            {% for member in admin_members %}
-                            <li><img src="{{ member.avatar_url }}"><span>{{ member.name }} (Admin)</span></li>
-                            {% endfor %}
-                            {% for member in mod_members %}
-                            <li><img src="{{ member.avatar_url }}"><span>{{ member.name }} (Mod)</span></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div>
-                        <h4>Manage Staff Member</h4>
-                        <div class="form-group">
-                            <label for="staff_target_id">User ID</label>
-                            <input type="text" id="staff_target_id" class="input">
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_role_type">Role Type</label>
-                            <select id="staff_role_type" class="input">
-                                <option value="mod">Moderator</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div class="staff-actions">
-                            <button id="add-staff-btn" class="button">Add</button>
-                            <button id="remove-staff-btn" class="button" style="background-color: var(--accent-color);">Remove</button>
-                        </div>
-                        <div id="staff-response"></div>
-                    </div>
+                <div class="card-header-action">
+                    <h3>Staff Management</h3>
+                    <button id="open-add-staff-modal-btn" class="icon-button" aria-label="Add Staff Member">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
+                            <path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
+                <p class="subtitle">Assigns the first configured Admin/Mod role from the bot's settings.</p>
+                <div style="margin-top: 1.5rem;">
+                    <h4>Current Staff</h4>
+                    <ul class="staff-list clickable-list">
+                        {% for member in admin_members %}
+                        <li data-id="{{ member.id }}" data-name="{{ member.name }}" data-role="admin">
+                            <img src="{{ member.avatar_url }}">
+                            <span>{{ member.name }} (Admin)</span>
+                        </li>
+                        {% endfor %}
+                        {% for member in mod_members %}
+                        <li data-id="{{ member.id }}" data-name="{{ member.name }}" data-role="mod">
+                            <img src="{{ member.avatar_url }}">
+                            <span>{{ member.name }} (Mod)</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div id="staff-response"></div>
             </div>
             {% endif %}
         </div>
@@ -151,41 +144,139 @@
         <a href="{{ url_for('panel_mod_menu', guild_id=guild_id) }}" class="active">Mod Menu</a>
     </nav>
 
-    <div id="mod-modal" class="modal">
-      <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h3 id="modal-title">Action Details</h3>
-        <form id="mod-modal-form">
-            <div id="duration-group" class="form-group" style="display: none;">
-                <label for="duration">Timeout Duration (minutes)</label>
-                <input type="number" id="duration" name="duration" class="input" value="10">
+    <div id="mod-action-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" data-modal="mod-action-modal">&times;</span>
+        <h3 id="mod-action-title">Moderate User</h3>
+        <p>Taking action on: <strong id="mod-action-username">User...</strong></p>
+        <form id="mod-action-form">
+            <input type="hidden" id="mod-action-target-id">
+            <div class="form-group">
+                <label for="mod_action_select">Action</label>
+                <select id="mod_action_select" class="input">
+                    <option value="warn">Warn</option>
+                    <option value="timeout">Timeout</option>
+                    <option value="kick">Kick</option>
+                    <option value="ban">Ban</option>
+                </select>
+            </div>
+            <div id="mod-action-duration-group" class="form-group" style="display: none; margin-top: 1rem;">
+                <label for="mod-action-duration">Timeout Duration (minutes)</label>
+                <input type="number" id="mod-action-duration" name="duration" class="input" value="10">
             </div>
             <div class="form-group" style="margin-top: 1rem;">
-                <label for="reason">Reason</label>
-                <textarea id="reason" name="reason" class="input" rows="3" required></textarea>
+                <label for="mod-action-reason">Reason</label>
+                <textarea id="mod-action-reason" name="reason" class="input" rows="3" required></textarea>
             </div>
             <button type="submit" class="button" style="margin-top: 1.5rem;">Confirm Action</button>
         </form>
-      </div>
+    </div>
+    </div>
+
+    <div id="send-message-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="send-message-modal">&times;</span>
+            <h3>Message via Bot</h3>
+            
+            <div id="message-type-selector" class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button class="button modal-tab-btn active" data-tab="regular-message-tab">Regular Message</button>
+                <button class="button modal-tab-btn" data-tab="embed-message-tab">Embed Message</button>
+            </div>
+
+            <form id="regular-message-tab" class="modal-tab-content" style="display: block; margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label for="regular_channel_select">Channel</label>
+                    <select id="regular_channel_select" class="input">
+                        <option value="">Loading channels...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="regular_message_content">Content</label>
+                    <textarea id="regular_message_content" class="input" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="button" style="margin-top: 1.5rem;">Send Message</button>
+            </form>
+            
+            <form id="embed-message-tab" class="modal-tab-content" style="display: none; margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label for="embed_channel_select">Channel</label>
+                    <select id="embed_channel_select" class="input">
+                        <option value="">Loading channels...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="embed_title">Embed Title</label>
+                    <input type="text" id="embed_title" class="input">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="embed_description">Embed Description</label>
+                    <textarea id="embed_description" class="input" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="button" style="margin-top: 1.5rem;">Send Embed</button>
+            </form>
+            <div id="send-response" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <div id="manage-staff-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="manage-staff-modal">&times;</span>
+            <h3>Manage Staff Member</h3>
+            <p>Managing: <strong id="manage-staff-username">User...</strong></p>
+            <form id="manage-staff-form">
+                <input type="hidden" id="manage-staff-target-id">
+                <div class="form-group">
+                    <label for="manage_staff_role_type">Role Type</label>
+                    <select id="manage_staff_role_type" class="input">
+                        <option value="mod">Moderator</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="staff-actions" style="margin-top: 1.5rem;">
+                    <button type="submit" class="button">Update Role</button>
+                    <button type="button" id="manage-staff-remove-btn" class="button" style="background-color: var(--accent-color);">Remove Staff</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-staff-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="add-staff-modal">&times;</span>
+            <h3>Add Staff Member</h3>
+            <form id="add-staff-form">
+                <div class="form-group">
+                    <label for="add_staff_search">Search for Member</label>
+                    <input type="text" id="add_staff_search" class="input" placeholder="Needs API to show member list">
+                    <input type="hidden" id="add_staff_target_id">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="add_staff_role_type">Role Type</label>
+                    <select id="add_staff_role_type" class="input">
+                        <option value="mod">Moderator</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="button" style="margin-top: 1.5rem;">Add Staff</button>
+            </form>
+        </div>
     </div>
     
     <script>
+        // --- CONSTANTS & TOKENS ---
         const guildId = '{{ guild_id }}';
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        // --- THEME TOGGLE ---
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const body = document.body;
-        const currentTheme = localStorage.getItem('theme');
-
-        if (currentTheme === 'light') {
-            body.classList.add('light-mode');
+        if (body.classList.contains('light-mode')) {
             themeToggleBtn.textContent = '🌙';
         } else {
             themeToggleBtn.textContent = '☀️';
         }
-
         themeToggleBtn.addEventListener('click', () => {
             body.classList.toggle('light-mode');
-            
             if (body.classList.contains('light-mode')) {
                 themeToggleBtn.textContent = '🌙';
                 localStorage.setItem('theme', 'light');
@@ -194,7 +285,8 @@
                 localStorage.setItem('theme', 'dark');
             }
         });
-        
+
+        // --- API & RESPONSE HELPERS ---
         async function apiPost(url, formData) {
             const response = await fetch(url, {
                 method: 'POST',
@@ -209,52 +301,170 @@
             el.textContent = message;
             el.style.color = isError ? 'var(--accent-color)' : '#57F287';
         }
-        const modModal = document.getElementById('mod-modal');
-        const takeActionBtn = document.getElementById('take-action-btn');
-        const closeBtn = document.querySelector('.close-button');
-        const addStaffBtn = document.getElementById('add-staff-btn');
-        const removeStaffBtn = document.getElementById('remove-staff-btn');
 
-        const handleStaffAction = async (action) => {
-            const formData = new FormData();
-            formData.append('target_id', document.getElementById('staff_target_id').value);
-            formData.append('role_type', document.getElementById('staff_role_type').value);
-            formData.append('role_action', action);
-
-            const response = await apiPost(`/api/v1/actions/manage-staff/${guildId}`, formData);
-            const result = await response.json();
-            showResponse('staff-response', result.message || result.error, !response.ok);
-            if(response.ok) {
-                setTimeout(() => window.location.reload(), 1500);
-            }
+        // --- MODAL HANDLING ---
+        const modals = document.querySelectorAll('.modal');
+        document.querySelectorAll('.close-button').forEach(btn => {
+            btn.onclick = () => document.getElementById(btn.dataset.modal).style.display = 'none';
+        });
+        window.onclick = (event) => {
+            modals.forEach(modal => {
+                if (event.target == modal) modal.style.display = 'none';
+            });
         };
+        document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const parent = e.target.closest('.modal-content');
+                parent.querySelectorAll('.modal-tab-btn').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                parent.querySelectorAll('.modal-tab-content').forEach(c => c.style.display = 'none');
+                parent.querySelector(`#${e.target.dataset.tab}`).style.display = 'block';
+            });
+        });
 
-        if (addStaffBtn && removeStaffBtn) {
-            addStaffBtn.addEventListener('click', () => handleStaffAction('add'));
-            removeStaffBtn.addEventListener('click', () => handleStaffAction('remove'));
+        // --- MEMBER SEARCH (For Mod User & Add Staff) ---
+        // This function will be called by two different search bars
+        async function searchMembers(query, resultsListElement) {
+            if (query.length < 2) {
+                resultsListElement.innerHTML = '';
+                return;
+            }
+            
+            const response = await fetch(`/api/v1/search-members/${guildId}?q=${query}`);
+            const members = await response.json();
+            
+            resultsListElement.innerHTML = ''; // Clear old results
+            if (members.length === 0) {
+                resultsListElement.innerHTML = '<div class="search-result-item">No members found.</div>';
+                return;
+            }
+
+            members.forEach(member => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.textContent = `${member.name} (${member.username})`;
+                item.dataset.id = member.id;
+                item.dataset.name = member.name;
+                
+                // Add click listener based on which search bar this is
+                if (resultsListElement.id === 'mod-search-results') {
+                    item.onclick = () => openModActionModal(member.id, member.name);
+                } else if (resultsListElement.id === 'add-staff-search-results') {
+                    item.onclick = () => selectStaffMember(member.id, member.name);
+                }
+                
+                resultsListElement.appendChild(item);
+            });
         }
 
-        takeActionBtn.onclick = () => {
-            const action = document.getElementById('mod_action').value;
-            document.getElementById('modal-title').textContent = `${action.charAt(0).toUpperCase() + action.slice(1)} User`;
-            document.getElementById('duration-group').style.display = (action === 'timeout') ? 'block' : 'none';
-            modModal.style.display = 'block';
-        };
-        closeBtn.onclick = () => modModal.style.display = 'none';
-        window.onclick = (event) => { if (event.target == modModal) modModal.style.display = 'none'; };
+        // --- MODERATE USER (New Logic) ---
+        const modSearchInput = document.getElementById('search_user');
+        const modSearchResults = document.getElementById('search-results-list'); // Ensure this div exists in your HTML
+        modSearchResults.id = 'mod-search-results'; // Assign ID for our function
         
-        document.getElementById('mod-modal-form').addEventListener('submit', async (e) => {
+        modSearchInput.addEventListener('keyup', (e) => {
+            searchMembers(e.target.value, modSearchResults);
+        });
+        
+        function openModActionModal(targetId, username) {
+            document.getElementById('mod-action-target-id').value = targetId;
+            document.getElementById('mod-action-username').textContent = username;
+            modSearchResults.innerHTML = ''; // Clear search
+            modSearchInput.value = ''; // Clear search
+            document.getElementById('mod-action-modal').style.display = 'block';
+        }
+
+        document.getElementById('mod_action_select').addEventListener('change', (e) => {
+            document.getElementById('mod-action-duration-group').style.display = (e.target.value === 'timeout') ? 'block' : 'none';
+        });
+
+        document.getElementById('mod-action-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData();
-            formData.append('target_id', document.getElementById('target_id').value);
-            formData.append('mod_action', document.getElementById('mod_action').value);
-            formData.append('duration', document.getElementById('duration').value);
-            formData.append('reason', document.getElementById('reason').value);
+            formData.append('target_id', document.getElementById('mod-action-target-id').value);
+            formData.append('mod_action', document.getElementById('mod_action_select').value);
+            formData.append('duration', document.getElementById('mod-action-duration').value);
+            formData.append('reason', document.getElementById('mod-action-reason').value);
+            
             const response = await apiPost(`/api/v1/actions/moderate/${guildId}`, formData);
             const result = await response.json();
             showResponse('mod-response', result.message || result.error, !response.ok);
-            if (response.ok) modModal.style.display = 'none';
+            if (response.ok) document.getElementById('mod-action-modal').style.display = 'none';
         });
+
+        // --- SEND MESSAGE (New Logic) ---
+        let channelsLoaded = false;
+        async function loadChannels() {
+            if (channelsLoaded) return; // Don't load twice
+            
+            const response = await fetch(`/api/v1/get-channels/${guildId}`);
+            const channels = await response.json();
+            
+            const regularSelect = document.getElementById('regular_channel_select');
+            const embedSelect = document.getElementById('embed_channel_select');
+            regularSelect.innerHTML = '';
+            embedSelect.innerHTML = '';
+            
+            if (channels.length === 0) {
+                 regularSelect.innerHTML = '<option value="">No channels found.</option>';
+                 embedSelect.innerHTML = '<option value="">No channels found.</option>';
+                 return;
+            }
+
+            let currentCategory = '';
+            channels.forEach(channel => {
+                if (channel.category !== currentCategory) {
+                    currentCategory = channel.category;
+                    const optGroup = document.createElement('optgroup');
+                    optGroup.label = currentCategory;
+                    regularSelect.appendChild(optGroup.cloneNode(true));
+                    embedSelect.appendChild(optGroup.cloneNode(true));
+                }
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = `#${channel.name}`;
+                
+                // Add to the correct category
+                regularSelect.querySelector(`optgroup[label="${currentCategory}"]`).appendChild(option.cloneNode(true));
+                embedSelect.querySelector(`optgroup[label="${currentCategory}"]`).appendChild(option.cloneNode(true));
+            });
+            channelsLoaded = true;
+        }
+
+        document.getElementById('open-message-modal-btn').onclick = () => {
+            loadChannels(); // Load channels when modal is opened
+            document.getElementById('send-message-modal').style.display = 'block';
+        };
+
+        async function handleSendMessage(e, isEmbed) {
+            e.preventDefault();
+            const formData = new FormData();
+            const type = isEmbed ? 'embed' : 'regular';
+            
+            const channelId = document.getElementById(`${type}_channel_select`).value;
+            const content = isEmbed 
+                ? `${document.getElementById('embed_title').value}|${document.getElementById('embed_description').value}`
+                : document.getElementById('regular_message_content').value;
+
+            if (!channelId) {
+                showResponse('send-response', 'Please select a channel.', true);
+                return;
+            }
+
+            formData.append('channel_id', channelId);
+            formData.append('message_content', content);
+            formData.append('is_embed', isEmbed);
+
+            const response = await apiPost(`/api/v1/actions/send-message/${guildId}`, formData);
+            const result = await response.json();
+            showResponse('send-response', result.message || result.error, !response.ok);
+            if (response.ok) document.getElementById('send-message-modal').style.display = 'none';
+        }
+        
+        document.getElementById('regular-message-tab').addEventListener('submit', (e) => handleSendMessage(e, false));
+        document.getElementById('embed-message-tab').addEventListener('submit', (e) => handleSendMessage(e, true));
+
+        // --- SETUP & RESET BUTTONS (Old Logic) ---
         document.querySelectorAll('.setup-btn').forEach(button => {
             button.addEventListener('click', async () => {
                 const setupType = button.dataset.setup;
@@ -265,13 +475,14 @@
                 showResponse('setup-response', result.message || result.error, !response.ok);
             });
         });
-        document.getElementById('send-message-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const response = await apiPost(`/api/v1/actions/send-message/${guildId}`, formData);
+
+        document.getElementById('reset-stuck-review-btn').addEventListener('click', async () => {
+            const response = await apiPost(`/api/v1/actions/reset-stuck-review/${guildId}`, new FormData());
             const result = await response.json();
-            showResponse('send-response', result.message || result.error, !response.ok);
+            showResponse('setup-response', result.message || result.error, !response.ok);
         });
+
+        // --- AUDIT LOG (Old Logic) ---
         document.getElementById('load-audit-log').addEventListener('click', async () => {
             const contentDiv = document.getElementById('audit-log-content');
             contentDiv.innerHTML = '<p>Loading logs...</p>';
@@ -287,11 +498,84 @@
                 contentDiv.innerHTML = '<p style="color: var(--accent-color);">Failed to load audit logs.</p>';
             }
         });
-        document.getElementById('reset-stuck-review-btn').addEventListener('click', async () => {
-            const response = await apiPost(`/api/v1/actions/reset-stuck-review/${guildId}`, new FormData());
-            const result = await response.json();
-            showResponse('setup-response', result.message || result.error, !response.ok);
+
+        // --- STAFF MANAGEMENT (New Logic) ---
+        const addStaffSearch = document.getElementById('add_staff_search');
+        if (addStaffSearch) {
+            const addStaffResults = document.createElement('div');
+            addStaffResults.id = 'add-staff-search-results';
+            addStaffResults.className = 'search-results';
+            addStaffSearch.parentNode.insertBefore(addStaffResults, addStaffSearch.nextSibling);
+
+            addStaffSearch.addEventListener('keyup', (e) => {
+                searchMembers(e.target.value, addStaffResults);
+            });
+        }
+        
+        function selectStaffMember(targetId, username) {
+            document.getElementById('add_staff_search').value = username;
+            document.getElementById('add_staff_target_id').value = targetId; // Store the ID
+            document.getElementById('add-staff-search-results').innerHTML = ''; // Hide results
+        }
+
+        if (document.getElementById('open-add-staff-modal-btn')) {
+            document.getElementById('open-add-staff-modal-btn').onclick = () => {
+                document.getElementById('add-staff-modal').style.display = 'block';
+            };
+        }
+        
+        document.querySelectorAll('.staff-list.clickable-list li').forEach(item => {
+            item.addEventListener('click', () => {
+                document.getElementById('manage-staff-target-id').value = item.dataset.id;
+                document.getElementById('manage-staff-username').textContent = item.dataset.name;
+                document.getElementById('manage_staff_role_type').value = item.dataset.role;
+                document.getElementById('manage-staff-modal').style.display = 'block';
+            });
         });
+
+        async function handleStaffAction(action, targetId, roleType) {
+            const formData = new FormData();
+            formData.append('target_id', targetId);
+            formData.append('role_type', roleType);
+            formData.append('role_action', action);
+
+            const response = await apiPost(`/api/v1/actions/manage-staff/${guildId}`, formData);
+            const result = await response.json();
+            showResponse('staff-response', result.message || result.error, !response.ok);
+            if(response.ok) {
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
+        
+        if (document.getElementById('manage-staff-form')) {
+            document.getElementById('manage-staff-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const targetId = document.getElementById('manage-staff-target-id').value;
+                const roleType = document.getElementById('manage_staff_role_type').value;
+                handleStaffAction('add', targetId, roleType); // 'add' acts as 'update'
+            });
+        }
+        
+        if (document.getElementById('manage-staff-remove-btn')) {
+            document.getElementById('manage-staff-remove-btn').addEventListener('click', () => {
+                const targetId = document.getElementById('manage-staff-target-id').value;
+                const roleType = document.getElementById('manage_staff_role_type').value;
+                handleStaffAction('remove', targetId, roleType);
+            });
+        }
+        
+        if (document.getElementById('add-staff-form')) {
+            document.getElementById('add-staff-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const targetId = document.getElementById('add_staff_target_id').value; // This is now set by selectStaffMember
+                const roleType = document.getElementById('add_staff_role_type').value;
+                if (!targetId) {
+                    showResponse('staff-response', 'You must select a user from the search.', true);
+                    return;
+                }
+                handleStaffAction('add', targetId, roleType);
+            });
+        }
     </script>
 </body>
 </html>

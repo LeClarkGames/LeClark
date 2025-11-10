@@ -572,6 +572,69 @@ async def api_manage_staff(guild_id: int):
     app.bot_instance.action_queue.put_nowait(task)
     return jsonify({"message": f"Staff role {task['role_action']} action queued successfully."}), 200
 
+@app.route('/api/v1/search-members/<int:guild_id>')
+@login_required
+async def api_search_members(guild_id: int):
+    """API endpoint to search for guild members."""
+    query = request.args.get('q', '').lower()
+    if not query or len(query) < 2:
+        return jsonify([])
+
+    guild = app.bot_instance.get_guild(guild_id)
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+
+    results = []
+    for member in guild.members:
+        if member.bot:
+            continue
+        
+        if (query in member.display_name.lower()) or \
+           (query in member.name.lower()) or \
+           (query in str(member).lower()):
+            
+            results.append({
+                "id": str(member.id),
+                "name": member.display_name,
+                "username": str(member)
+            })
+        
+        if len(results) >= 10:
+            break
+            
+    return jsonify(results)
+
+@app.route('/api/v1/get-channels/<int:guild_id>')
+@login_required
+async def api_get_channels(guild_id: int):
+    """API endpoint to get a list of text channels."""
+    guild = app.bot_instance.get_guild(guild_id)
+    if not guild:
+        return jsonify({"error": "Guild not found"}), 404
+
+    user_id = int(session.get('user_id'))
+    member = guild.get_member(user_id)
+    if not member:
+         return jsonify({"error": "Could not find your user in the guild"}), 403
+
+    results = []
+    sorted_channels = sorted(guild.text_channels, key=lambda c: (c.category.position if c.category else -1, c.position))
+
+    for channel in sorted_channels:
+        user_perms = channel.permissions_for(member)
+        bot_perms = channel.permissions_for(guild.me)
+        
+        if user_perms.view_channel and user_perms.send_messages and \
+           bot_perms.view_channel and bot_perms.send_messages:
+            
+            results.append({
+                "id": str(channel.id),
+                "name": channel.name,
+                "category": channel.category.name if channel.category else "Text Channels"
+            })
+            
+    return jsonify(results)
+
 @app.route('/api/v1/actions/reset-stuck-review/<int:guild_id>', methods=['POST'])
 @login_required
 async def api_reset_stuck_review(guild_id: int):

@@ -9,9 +9,18 @@
     <style>
         .url-box { display: flex; }
         .url-box input { width: 100%; font-family: 'Raleway', sans-serif; }
-        .url-box button { width: auto; font-family: 'Teko', sans-serif; text-transform: uppercase; }
+        .url-box button { width: auto; }
         .copy-status { margin-top: 8px; font-size: 14px; color: #57F287; visibility: hidden; height: 16px; text-align: left;}
     </style>
+    <script>
+        (function() {
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'light') {
+                body.classList.add('light-mode');
+            }
+        })();
+    </script>
 </head>
 <body>
 
@@ -22,11 +31,16 @@
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
             <span>{{ user_name }}</span>
-            <span class="user-access-level">({{ access_level }})</span>
+            <span class="access-badge">{{ access_level }} Access</span>
 
-            <button id="theme-toggle-btn">☀️</button>
-            
-            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="logout-button">(Logout)</a>
+            <button id="theme-toggle-btn" class="icon-button">☀️</button>
+
+            <a href="{{ url_for('logout', guild_id=guild_id) }}" class="icon-button logout-button" aria-label="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px" height="22px">
+                    <path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5A1.5 1.5 0 007.5 20.25h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5a.75.75 0 010-1.5h3.75a.75.75 0 000-1.5H7.5A1.5 1.5 0 006 5.25z" clip-rule="evenodd" />
+                    <path d="M13.06 8.22a.75.75 0 011.06 0l3.75 3.75a.75.75 0 010 1.06l-3.75 3.75a.75.75 0 11-1.06-1.06l2.47-2.47H9.75a.75.75 0 010-1.5h5.78l-2.47-2.47a.75.75 0 010-1.06z" />
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -35,7 +49,7 @@
         
         <div class="card">
             <h3>Setup Guide</h3>
-            <p style="text-align: left;">
+            <p style="text-align: center;">
                 Use the URLs below to add real-time submission widgets to your stream via a "Browser Source" in OBS, Streamlabs, or other streaming software.
                 <br><strong>Do not share these links with anyone!</strong> They are unique to this server and grant access to live data.
             </p>
@@ -45,7 +59,11 @@
             <h4 style="margin-top: 0;">🎵 Regular Submissions Widget</h4>
             <div class="url-box">
                 <input type="text" class="input" value="{{ regular_widget_url }}" id="regularUrl" readonly>
-                <button class="button" onclick="copyToClipboard('regularUrl', 'regular-status')">Copy</button>
+                <button class="button" onclick="copyToClipboard('regularUrl', 'regular-status')" aria-label="Copy URL" style="padding: 12px 15px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px">
+                        <path d="M7.5 3.75A2.25 2.25 0 005.25 6v13.5A2.25 2.25 0 007.5 21.75h9A2.25 2.25 0 0018.75 19.5V6A2.25 2.25 0 0016.5 3.75h-9zm6.75 2.25a.75.75 0 000-1.5h-4.5a.75.75 0 000 1.5h4.5zM7.5 7.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 7.5zm.75 2.25a.75.75 0 000 1.5h7.5a.75.75 0 000-1.5h-7.5z" />
+                    </svg>
+                </button>
             </div>
             <p class="copy-status" id="regular-status">Copied!</p>
         </div>
@@ -60,18 +78,13 @@
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const body = document.body;
-        const currentTheme = localStorage.getItem('theme');
-
-        if (currentTheme === 'light') {
-            body.classList.add('light-mode');
+        if (body.classList.contains('light-mode')) {
             themeToggleBtn.textContent = '🌙';
         } else {
             themeToggleBtn.textContent = '☀️';
         }
-
         themeToggleBtn.addEventListener('click', () => {
             body.classList.toggle('light-mode');
-            
             if (body.classList.contains('light-mode')) {
                 themeToggleBtn.textContent = '🌙';
                 localStorage.setItem('theme', 'light');

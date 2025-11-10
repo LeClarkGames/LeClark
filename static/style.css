@@ -346,3 +346,48 @@ body.light-mode .bottom-bar a.active {
     background-color: var(--accent-color);
     color: #FFFFFF; 
 }
+
+.user-profile .access-badge {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: var(--accent-color);
+    color: #FFFFFF;
+}
+
+.user-profile .icon-button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 5px;
+    margin: 0;
+    width: auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.user-profile .icon-button:hover {
+    background-color: var(--border-color);
+}
+
+.user-profile .logout-button {
+    margin-left: 0.5rem;
+    padding: 5px;
+    text-decoration: none;
+    color: var(--secondary-text-color);
+}
+
+.user-profile .logout-button:hover {
+    color: var(--accent-color);
+    background-color: var(--border-color);
+}
+
+#theme-toggle-btn {
+    margin: 0 0.5rem;
+}

@@ -38,10 +38,24 @@ async def initialize_database():
             await cursor.execute("""
                 CREATE TABLE IF NOT EXISTS guild_settings (
                     guild_id INTEGER PRIMARY KEY,
-                    verification_channel_id INTEGER, unverified_role_id INTEGER, member_role_id INTEGER,
-                    verification_message_id INTEGER, admin_role_ids TEXT, mod_role_ids TEXT,
-                    submission_channel_id INTEGER, review_channel_id INTEGER, submission_status TEXT DEFAULT 'closed',
-                    review_panel_message_id INTEGER, announcement_channel_id INTEGER, last_milestone_count INTEGER DEFAULT 0
+                    verification_channel_id INTEGER, 
+                    unverified_role_id INTEGER, 
+                    member_role_id INTEGER,
+                    verification_message_id INTEGER, 
+                    admin_role_ids TEXT, 
+                    mod_role_ids TEXT,
+                    submission_channel_id INTEGER, 
+                    review_channel_id INTEGER, 
+                    submission_status TEXT DEFAULT 'closed',
+                    review_panel_message_id INTEGER, 
+                    announcement_channel_id INTEGER, 
+                    last_milestone_count INTEGER DEFAULT 0,
+
+                    -- THESE COLUMNS WERE MISSING --
+                    log_channel_id INTEGER,
+                    temp_vc_hub_id INTEGER,
+                    temp_vc_category_id INTEGER,
+                    verification_mode TEXT DEFAULT 'free'
                 )
             """)
             await cursor.execute("CREATE TABLE IF NOT EXISTS warnings (warning_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL, moderator_id INTEGER NOT NULL, reason TEXT, issued_at TIMESTAMP NOT NULL, log_message_id INTEGER)")

@@ -8,12 +8,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
 
         :root {
+            /* --- NEW Purple/Blue Theme --- */
             --background: transparent;
             --text-primary: #ffffff;
-            --text-secondary: #adb5bd;
-            --accent-color: #5865F2;
-            --card-bg: rgba(18, 18, 28, 0.85);
-            --border-color: rgba(255, 255, 255, 0.1);
+            --text-secondary: #c0c8ff; /* Lighter blue/purple */
+            --accent-color: #8b5cf6; /* Purple */
+            --card-bg: rgba(30, 32, 50, 0.85); /* Match the panel's dark card bg */
+            --border-color: rgba(139, 92, 246, 0.2); /* Match the panel's border */
         }
 
         /* --- NEW: Text Gradient Animation --- */
@@ -24,7 +25,8 @@
         }
 
         .text-gradient {
-            background: linear-gradient(90deg, #5865F2, #a458f2, #58e6f2, #5865F2);
+            /* --- NEW Gradient --- */
+            background: linear-gradient(90deg, #8b5cf6, #5865F2, #8b5cf6);
             background-size: 300% 300%;
             -webkit-background-clip: text;
             background-clip: text;
@@ -187,7 +189,7 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const token = "{{ token }}";
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsProtocol = window.location.protocol === 'https:?' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${token}`;
         let socket;
         function connect() {

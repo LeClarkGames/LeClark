@@ -370,13 +370,11 @@ async def xp_leaderboard(guild_id: int):
 
     raw_leaderboard = await database.get_leaderboard(guild_id, limit=100)
     
-    # --- FIX STARTS HERE ---
-    
-    users = [] # Initialize the list first
-    if raw_leaderboard: # Only proceed if there's data
+    users = []
+    if raw_leaderboard:
         user_ids = [user_id for user_id, xp in raw_leaderboard]
         user_data_task = asyncio.gather(*[fetch_user_data(uid) for uid in user_ids])
-        fetched_users = await asyncio.gather(user_data_task)
+        fetched_users = await user_data_task
         
         for i, (user_id, xp) in enumerate(raw_leaderboard):
             user_info = fetched_users[i]

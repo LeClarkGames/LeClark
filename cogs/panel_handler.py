@@ -85,10 +85,18 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                         self.bot.action_queue.task_done()
                         return
 
-                    target = guild.get_member(int(task.get('target_id')))
+                    target_id_str = task.get('target_id')
+                    
+                    if not target_id_str:
+                        log.warning(f"Could not find target member for staff management: No User ID was provided.")
+                        self.bot.action_queue.task_done()
+                        return
+
+                    target = guild.get_member(int(target_id_str))
+
                     role_type = task.get('role_type')
                     role_action = task.get('role_action')
-                    
+
                     if not target:
                         log.warning(f"Could not find target member for staff management.")
                         self.bot.action_queue.task_done()
@@ -107,7 +115,6 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                         self.bot.action_queue.task_done()
                         return
 
-                    # --- NEW HIERARCHY CHECKS ---
                     if guild.me.top_role <= role_to_manage:
                         log.error(f"Cannot manage role '{role_to_manage.name}' because it is higher than or equal to my own top role.")
                         self.bot.action_queue.task_done()
@@ -116,7 +123,6 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                         log.error(f"Cannot manage roles for {target.display_name} because they have a higher or equal role than me.")
                         self.bot.action_queue.task_done()
                         return
-                    # --- END HIERARCHY CHECKS ---
 
                     if role_action == 'add':
                         await target.add_roles(role_to_manage, reason=f"Added by {moderator.display_name} via Web Panel")
@@ -126,7 +132,6 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                         log.info(f"Removed '{role_to_manage.name}' from {target.display_name} via Web Panel.")
 
                 except discord.Forbidden as e:
-                    # Catch the error just in case and log it clearly
                     log.error(f"A permissions error occurred while managing staff role: {e}")
                 except Exception as e:
                     log.error(f"An unexpected error occurred in staff management: {e}")

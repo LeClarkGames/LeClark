@@ -6,6 +6,7 @@
     <title>{{ guild_name }} - Mod Menu</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/icon.png">
     <style>
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         .form-group { display: flex; flex-direction: column; text-align: left; }
@@ -43,11 +44,11 @@
         })();
     </script>
 </head>
-<body>
-
+<body class="body-fade-in">
     <header class="top-bar">
         <div class="logo">
-            LOGO
+            <img src="/static/logo.png" alt="Logo" class="logo-light-mode">
+            <img src="/static/logo-white.png" alt="Logo" class="logo-dark-mode">
         </div>
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
@@ -98,7 +99,7 @@
 
             <div class="card" style="grid-column: 1 / -1;">
                 <h3>Server Audit Log</h3>
-                <div id="audit-log-content" style="text-align: left; max-height: 400px; overflow-y: auto;">
+                <div id="audit-log-content" style="text-align: left; height: 400px; overflow-y: auto;">
                     <p class="subtitle">Click the button to load the latest server events.</p>
                 </div>
                 <button id="load-audit-log" class="button" style="margin-top: 1rem;">Load Audit Log</button>
@@ -225,16 +226,16 @@
             <p>Managing: <strong id="manage-staff-username">User...</strong></p>
             <form id="manage-staff-form">
                 <input type="hidden" id="manage-staff-target-id">
-                <div class="form-group">
+                <div class="form-group" style="display: none;">
                     <label for="manage_staff_role_type">Role Type</label>
                     <select id="manage_staff_role_type" class="input">
                         <option value="mod">Moderator</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>
-                <div class="staff-actions" style="margin-top: 1.5rem;">
-                    <button type="submit" class="button">Update Role</button>
-                    <button type="button" id="manage-staff-remove-btn" class="button" style="background-color: var(--accent-color);">Remove Staff</button>
+                <div class="staff-actions"> <button type="button" id="promote-admin-btn" class="button">Promote to Admin</button>
+                    <button type="button" id="promote-mod-btn" class="button">Promote to Mod</button>
+                    <button type="button" id="manage-staff-remove-btn" class="button" style="background-color: var(--accent-color);">Remove</button>
                 </div>
             </form>
         </div>
@@ -247,7 +248,7 @@
             <form id="add-staff-form">
                 <div class="form-group">
                     <label for="add_staff_search">Search for Member</label>
-                    <input type="text" id="add_staff_search" class="input" placeholder="Needs API to show member list">
+                    <input type="text" id="add_staff_search" class="input" placeholder="Start typing the name">
                     <input type="hidden" id="add_staff_target_id">
                 </div>
                 <div class="form-group" style="margin-top: 1rem;">
@@ -263,20 +264,24 @@
     </div>
     
     <script>
-        // --- CONSTANTS & TOKENS ---
         const guildId = '{{ guild_id }}';
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        // --- THEME TOGGLE ---
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const body = document.body;
-        if (body.classList.contains('light-mode')) {
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme === 'light') {
+            body.classList.add('light-mode');
             themeToggleBtn.textContent = '🌙';
         } else {
+            body.classList.remove('light-mode');
             themeToggleBtn.textContent = '☀️';
         }
+
         themeToggleBtn.addEventListener('click', () => {
             body.classList.toggle('light-mode');
+            
             if (body.classList.contains('light-mode')) {
                 themeToggleBtn.textContent = '🌙';
                 localStorage.setItem('theme', 'light');
@@ -286,7 +291,26 @@
             }
         });
 
-        // --- API & RESPONSE HELPERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.bottom-bar a, .top-bar a.logout-button');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', e => {
+                    const href = link.getAttribute('href');
+
+                    if (href && href.startsWith('/') && !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        
+                        document.body.classList.add('body-fade-out');
+
+                        setTimeout(() => {
+                            window.location.href = href;
+                        }, 300);
+                    }
+                });
+            });
+        });
+
         async function apiPost(url, formData) {
             const response = await fetch(url, {
                 method: 'POST',
@@ -302,7 +326,6 @@
             el.style.color = isError ? 'var(--accent-color)' : '#57F287';
         }
 
-        // --- MODAL HANDLING ---
         const modals = document.querySelectorAll('.modal');
         document.querySelectorAll('.close-button').forEach(btn => {
             btn.onclick = () => document.getElementById(btn.dataset.modal).style.display = 'none';
@@ -322,8 +345,6 @@
             });
         });
 
-        // --- MEMBER SEARCH (For Mod User & Add Staff) ---
-        // This function will be called by two different search bars
         async function searchMembers(query, resultsListElement) {
             if (query.length < 2) {
                 resultsListElement.innerHTML = '';
@@ -333,7 +354,7 @@
             const response = await fetch(`/api/v1/search-members/${guildId}?q=${query}`);
             const members = await response.json();
             
-            resultsListElement.innerHTML = ''; // Clear old results
+            resultsListElement.innerHTML = '';
             if (members.length === 0) {
                 resultsListElement.innerHTML = '<div class="search-result-item">No members found.</div>';
                 return;
@@ -346,7 +367,6 @@
                 item.dataset.id = member.id;
                 item.dataset.name = member.name;
                 
-                // Add click listener based on which search bar this is
                 if (resultsListElement.id === 'mod-search-results') {
                     item.onclick = () => openModActionModal(member.id, member.name);
                 } else if (resultsListElement.id === 'add-staff-search-results') {
@@ -357,10 +377,9 @@
             });
         }
 
-        // --- MODERATE USER (New Logic) ---
         const modSearchInput = document.getElementById('search_user');
-        const modSearchResults = document.getElementById('search-results-list'); // Ensure this div exists in your HTML
-        modSearchResults.id = 'mod-search-results'; // Assign ID for our function
+        const modSearchResults = document.getElementById('search-results-list');
+        modSearchResults.id = 'mod-search-results';
         
         modSearchInput.addEventListener('keyup', (e) => {
             searchMembers(e.target.value, modSearchResults);
@@ -369,8 +388,8 @@
         function openModActionModal(targetId, username) {
             document.getElementById('mod-action-target-id').value = targetId;
             document.getElementById('mod-action-username').textContent = username;
-            modSearchResults.innerHTML = ''; // Clear search
-            modSearchInput.value = ''; // Clear search
+            modSearchResults.innerHTML = '';
+            modSearchInput.value = '';
             document.getElementById('mod-action-modal').style.display = 'block';
         }
 
@@ -392,10 +411,9 @@
             if (response.ok) document.getElementById('mod-action-modal').style.display = 'none';
         });
 
-        // --- SEND MESSAGE (New Logic) ---
         let channelsLoaded = false;
         async function loadChannels() {
-            if (channelsLoaded) return; // Don't load twice
+            if (channelsLoaded) return;
             
             const response = await fetch(`/api/v1/get-channels/${guildId}`);
             const channels = await response.json();
@@ -424,7 +442,6 @@
                 option.value = channel.id;
                 option.textContent = `#${channel.name}`;
                 
-                // Add to the correct category
                 regularSelect.querySelector(`optgroup[label="${currentCategory}"]`).appendChild(option.cloneNode(true));
                 embedSelect.querySelector(`optgroup[label="${currentCategory}"]`).appendChild(option.cloneNode(true));
             });
@@ -432,7 +449,7 @@
         }
 
         document.getElementById('open-message-modal-btn').onclick = () => {
-            loadChannels(); // Load channels when modal is opened
+            loadChannels();
             document.getElementById('send-message-modal').style.display = 'block';
         };
 
@@ -464,7 +481,6 @@
         document.getElementById('regular-message-tab').addEventListener('submit', (e) => handleSendMessage(e, false));
         document.getElementById('embed-message-tab').addEventListener('submit', (e) => handleSendMessage(e, true));
 
-        // --- SETUP & RESET BUTTONS (Old Logic) ---
         document.querySelectorAll('.setup-btn').forEach(button => {
             button.addEventListener('click', async () => {
                 const setupType = button.dataset.setup;
@@ -482,7 +498,6 @@
             showResponse('setup-response', result.message || result.error, !response.ok);
         });
 
-        // --- AUDIT LOG (Old Logic) ---
         document.getElementById('load-audit-log').addEventListener('click', async () => {
             const contentDiv = document.getElementById('audit-log-content');
             contentDiv.innerHTML = '<p>Loading logs...</p>';
@@ -499,7 +514,6 @@
             }
         });
 
-        // --- STAFF MANAGEMENT (New Logic) ---
         const addStaffSearch = document.getElementById('add_staff_search');
         if (addStaffSearch) {
             const addStaffResults = document.createElement('div');
@@ -514,8 +528,8 @@
         
         function selectStaffMember(targetId, username) {
             document.getElementById('add_staff_search').value = username;
-            document.getElementById('add_staff_target_id').value = targetId; // Store the ID
-            document.getElementById('add-staff-search-results').innerHTML = ''; // Hide results
+            document.getElementById('add_staff_target_id').value = targetId;
+            document.getElementById('add-staff-search-results').innerHTML = '';
         }
 
         if (document.getElementById('open-add-staff-modal-btn')) {
@@ -547,12 +561,17 @@
             }
         }
         
-        if (document.getElementById('manage-staff-form')) {
-            document.getElementById('manage-staff-form').addEventListener('submit', (e) => {
-                e.preventDefault();
+        if (document.getElementById('promote-admin-btn')) {
+            document.getElementById('promote-admin-btn').addEventListener('click', () => {
                 const targetId = document.getElementById('manage-staff-target-id').value;
-                const roleType = document.getElementById('manage_staff_role_type').value;
-                handleStaffAction('add', targetId, roleType); // 'add' acts as 'update'
+                handleStaffAction('add', targetId, 'admin'); 
+            });
+        }
+        
+        if (document.getElementById('promote-mod-btn')) {
+            document.getElementById('promote-mod-btn').addEventListener('click', () => {
+                const targetId = document.getElementById('manage-staff-target-id').value;
+                handleStaffAction('add', targetId, 'mod');
             });
         }
         
@@ -567,7 +586,7 @@
         if (document.getElementById('add-staff-form')) {
             document.getElementById('add-staff-form').addEventListener('submit', (e) => {
                 e.preventDefault();
-                const targetId = document.getElementById('add_staff_target_id').value; // This is now set by selectStaffMember
+                const targetId = document.getElementById('add_staff_target_id').value;
                 const roleType = document.getElementById('add_staff_role_type').value;
                 if (!targetId) {
                     showResponse('staff-response', 'You must select a user from the search.', true);

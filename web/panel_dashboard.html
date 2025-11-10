@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ guild_name }} - Staff Dashboard</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <link rel="stylesheet" href="/static/style.css"> 
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/icon.png">
     <style>
         .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
         .leaderboard-card { grid-column: span 1; }
@@ -25,11 +26,11 @@
         })();
     </script>
 </head>
-<body>
-    
+<body class="body-fade-in">
     <header class="top-bar">
         <div class="logo">
-            LOGO
+            <img src="/static/logo.png" alt="Logo" class="logo-light-mode">
+            <img src="/static/logo-white.png" alt="Logo" class="logo-dark-mode">
         </div>
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
@@ -90,13 +91,19 @@
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const body = document.body;
-        if (body.classList.contains('light-mode')) {
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme === 'light') {
+            body.classList.add('light-mode');
             themeToggleBtn.textContent = '🌙';
         } else {
+            body.classList.remove('light-mode');
             themeToggleBtn.textContent = '☀️';
         }
+
         themeToggleBtn.addEventListener('click', () => {
             body.classList.toggle('light-mode');
+            
             if (body.classList.contains('light-mode')) {
                 themeToggleBtn.textContent = '🌙';
                 localStorage.setItem('theme', 'light');
@@ -104,6 +111,26 @@
                 themeToggleBtn.textContent = '☀️';
                 localStorage.setItem('theme', 'dark');
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.bottom-bar a, .top-bar a.logout-button');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', e => {
+                    const href = link.getAttribute('href');
+
+                    if (href && href.startsWith('/') && !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        
+                        document.body.classList.add('body-fade-out');
+
+                        setTimeout(() => {
+                            window.location.href = href;
+                        }, 300);
+                    }
+                });
+            });
         });
     </script>
 </body>

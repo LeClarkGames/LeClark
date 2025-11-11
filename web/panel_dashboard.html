@@ -38,6 +38,9 @@
             <img src="{{ user_avatar_url }}" alt="User Avatar">
             <span>{{ user_name }}</span>
             <span class="access-badge">{{ access_level }} Access</span>
+            {% if is_developer %}
+            <span class="access-badge developer">Developer Access</span>
+            {% endif %}
 
             <button id="theme-toggle-btn" class="icon-button">☀️</button>
 

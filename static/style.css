@@ -400,6 +400,10 @@ body.light-mode .bottom-bar a.active {
     color: #FFFFFF;
 }
 
+.user-profile .access-badge.developer {
+    background-color: #f00000;
+}
+
 .user-profile .icon-button {
     background: none;
     border: none;

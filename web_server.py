@@ -188,8 +188,10 @@ async def get_user_access_level(guild: discord.Guild, user_id: int) -> str:
 async def panel_home(guild_id: int):
     """Renders the main dashboard page."""
     guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
+    user_id = int(session.get('user_id'))
+    user_info = await fetch_user_data(user_id)
+    access_level = await get_user_access_level(guild, user_id)
+    is_dev = await utils.is_developer(user_id)
 
     last_member_joined = sorted(guild.members, key=lambda m: m.joined_at, reverse=True)[0]
     online_members = sum(1 for m in guild.members if m.status != discord.Status.offline)
@@ -218,17 +220,19 @@ async def panel_home(guild_id: int):
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
         access_level=access_level,
+        is_developer=is_dev,
         xp_leaderboard=xp_leaderboard,
         csrf_token=session.get('csrf_token')
     )
-
 @app.route('/panel/<int:guild_id>/widgets')
 @login_required
 async def panel_widgets(guild_id: int):
     """Renders the widgets page."""
     guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
+    user_id = int(session.get('user_id'))
+    user_info = await fetch_user_data(user_id)
+    access_level = await get_user_access_level(guild, user_id)
+    is_dev = await utils.is_developer(user_id)
 
     token = await database.get_or_create_widget_token(guild_id)
     widget_url_base = f"{APP_BASE_URL}/widget/view/{token}"
@@ -239,6 +243,7 @@ async def panel_widgets(guild_id: int):
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         regular_widget_url=f"{widget_url_base}?type=regular",
         access_level=access_level,
+        is_developer=is_dev,
         csrf_token=session.get('csrf_token')
     )
 
@@ -247,8 +252,10 @@ async def panel_widgets(guild_id: int):
 async def panel_mod_menu(guild_id: int):
     """Renders the moderation menu page."""
     guild = app.bot_instance.get_guild(guild_id)
-    user_info = await fetch_user_data(int(session.get('user_id')))
-    access_level = await get_user_access_level(guild, int(session.get('user_id')))
+    user_id = int(session.get('user_id'))
+    user_info = await fetch_user_data(user_id)
+    access_level = await get_user_access_level(guild, user_id)
+    is_dev = await utils.is_developer(user_id)
 
     admin_role_ids = await utils.get_admin_roles(guild_id)
     mod_role_ids = await utils.get_mod_roles(guild_id)
@@ -268,6 +275,7 @@ async def panel_mod_menu(guild_id: int):
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         access_level=access_level,
+        is_developer=is_dev,
         admin_members=admin_members,
         mod_members=mod_members,
         csrf_token=session.get('csrf_token')

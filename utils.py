@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 import database
+import config
 
 async def get_admin_roles(guild_id: int) -> list[int]:
     """Gets a list of admin role IDs for a guild."""
@@ -37,6 +38,10 @@ async def get_log_mentions(guild_id: int) -> str:
     all_role_ids = admin_ids.union(mod_ids)
     if not all_role_ids: return ""
     return " ".join([f"<@&{role_id}>" for role_id in all_role_ids])
+
+async def is_developer(user_id: int) -> bool:
+    """Checks if a user ID is in the developer list."""
+    return user_id in config.BOT_CONFIG.get("DEVELOPER_IDS", [])
 
 def has_permission(level="mod"):
     async def predicate(interaction: discord.Interaction) -> bool:

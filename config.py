@@ -25,5 +25,10 @@ BOT_CONFIG = {
         "SUCCESS": 0x57F287,
         "WARNING": 0xFEE75C,
         "ERROR": 0xED4245,
+    },
+
+    "DEVELOPER_IDS": {
+        536667002689945610,
+        1252526028472062062
     }
 }

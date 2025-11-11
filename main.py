@@ -12,7 +12,8 @@ import database
 import config
 from web_server import app
 from cogs.verification import VerificationButton
-from cogs.submissions import (SubmissionView)
+from cogs.submissions import (SubmissionViewOpen, SubmissionViewClosed)
+from cogs.role_giver import RoleGiverView
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)-8s] %(name)-12s: %(message)s", datefmt="%Y-m-d %H:%M:%S")
 log = logging.getLogger(__name__)
@@ -41,12 +42,16 @@ class MyBot(commands.Bot):
         await database.initialize_database()
         
         self.add_view(VerificationButton(bot=self))
+        self.add_view(RoleGiverView(bot=self))
+        self.add_view(SubmissionViewOpen(bot=self))
+        self.add_view(SubmissionViewClosed(bot=self))
         log.info("Registered persistent UI views.")
 
         cogs_to_load = [
             "cogs.settings", "cogs.moderation",
             "cogs.verification", "cogs.temp_vc", 
-            "cogs.submissions", "cogs.panel_handler", "cogs.ranking"
+            "cogs.submissions", "cogs.panel_handler",
+            "cogs.ranking", "cogs.role_giver", "cogs.panel_watcher"
         ]
         for cog in cogs_to_load:
             try:

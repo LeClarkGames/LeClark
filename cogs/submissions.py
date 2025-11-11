@@ -23,7 +23,7 @@ async def get_panel_embed_and_view(guild: discord.Guild, bot: commands.Bot):
 
     embed = discord.Embed(title=title, description=desc, color=embed_color)
     
-    view = SubmissionView(bot, status)
+    view = SubmissionViewOpen(bot) if is_open else SubmissionViewClosed(bot)
     
     return embed, view
 
@@ -52,6 +52,7 @@ class ReviewItemView(discord.ui.View):
         if not await utils.has_mod_role(interaction.user):
             return await interaction.response.send_message("❌ You do not have permission to review tracks.", ephemeral=True)
         
+        if not self.cog: self.cog = self.bot.get_cog("Submissions")
         self.cog.regular_session_reviewed_count[interaction.guild.id] += 1
 
         await database.update_submission_status(self.submission_id, "reviewed", interaction.user.id)
@@ -65,42 +66,14 @@ class ReviewItemView(discord.ui.View):
         await self.cog._broadcast_full_update(interaction.guild.id)
 
 
-# --- Base View for Shared Logic ---
 class SubmissionBaseView(discord.ui.View):
-    def __init__(self, bot: commands.Bot):
-        super().__init__(timeout=None)
-        self.bot = bot
-        self.cog = bot.get_cog("Submissions")
 
-    async def _update_panel(self, interaction: discord.Interaction):
-        """Updates the panel with the latest embed and view."""
-        async with self.cog.panel_update_locks[interaction.guild.id]:
-            panel_message = await self.cog.get_panel_message(interaction.guild)
-            if panel_message:
-                embed, view = await get_panel_embed_and_view(interaction.guild, self.bot)
-                try:
-                    await panel_message.edit(embed=embed, view=view)
-                except discord.NotFound:
-                    log.warning(f"Failed to update panel for guild {interaction.guild.id}, message not found.")
-
-class SubmissionView(SubmissionBaseView):
-    def __init__(self, bot: commands.Bot, status: str):
-        super().__init__(bot)
-        self.cog = bot.get_cog("Submissions")
-
-        if status == 'open':
-            self.add_item(self.PlayQueueButton())
-            self.add_item(self.StopSubmissionsButton())
-        else:
-            self.add_item(self.StartSubmissionsButton())
-        
-        self.add_item(self.StatisticsButton())
-    
     class StartSubmissionsButton(discord.ui.Button):
         def __init__(self):
             super().__init__(label="Start Submissions", style=discord.ButtonStyle.success, custom_id="sub_start_regular")
 
         async def callback(self, interaction: discord.Interaction):
+            if not self.view.cog: self.view.cog = self.view.bot.get_cog("Submissions")
             if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
             await interaction.response.defer()
             self.view.cog.regular_session_reviewed_count[interaction.guild.id] = 0
@@ -132,6 +105,7 @@ class SubmissionView(SubmissionBaseView):
             super().__init__(label="⏹️ Stop Submissions", style=discord.ButtonStyle.danger, custom_id="sub_stop_regular")
 
         async def callback(self, interaction: discord.Interaction):
+            if not self.view.cog: self.view.cog = self.view.bot.get_cog("Submissions")
             if not await utils.has_admin_role(interaction.user): return await interaction.response.send_message("❌ Admins only.", ephemeral=True)
             await interaction.response.defer()
             session_reviewed_count = self.view.cog.regular_session_reviewed_count.get(interaction.guild.id, 0)
@@ -154,6 +128,38 @@ class SubmissionView(SubmissionBaseView):
             embed = discord.Embed(title="📊 Regular Submission Statistics (All-Time)", description=f"A total of **{reviewed_count}** tracks have been permanently reviewed in this server.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
             await interaction.followup.send(embed=embed)
 
+    def __init__(self, bot: commands.Bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.cog = bot.get_cog("Submissions")
+        if not self.cog:
+            pass
+
+    async def _update_panel(self, interaction: discord.Interaction):
+        """Updates the panel with the latest embed and view."""
+        if not self.cog: self.cog = self.bot.get_cog("Submissions")
+        async with self.cog.panel_update_locks[interaction.guild.id]:
+            panel_message = await self.cog.get_panel_message(interaction.guild)
+            if panel_message:
+                embed, view = await get_panel_embed_and_view(interaction.guild, self.bot)
+                try:
+                    await panel_message.edit(embed=embed, view=view)
+                except discord.NotFound:
+                    log.warning(f"Failed to update panel for guild {interaction.guild.id}, message not found.")
+
+class SubmissionViewOpen(SubmissionBaseView):
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
+        self.add_item(self.PlayQueueButton())
+        self.add_item(self.StopSubmissionsButton())
+        self.add_item(self.StatisticsButton())
+
+class SubmissionViewClosed(SubmissionBaseView):
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
+        self.add_item(self.StartSubmissionsButton())
+        self.add_item(self.StatisticsButton())
+
 class SubmissionsCog(commands.Cog, name="Submissions"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -174,6 +180,12 @@ class SubmissionsCog(commands.Cog, name="Submissions"):
     async def _broadcast_full_update(self, guild_id: int):
         """Helper to construct and broadcast a full widget update."""
         if hasattr(self.bot, 'app') and hasattr(self.bot.app, 'ws_manager'):
+            # Need to get the cog properly
+            if not self.bot.get_cog("Submissions"): return
+            if not hasattr(self.bot.app, 'get_full_widget_data'):
+                log.warning("ws_manager is present, but get_full_widget_data is not on app.")
+                return
+                
             full_data = await self.bot.app.get_full_widget_data(guild_id)
             await self.bot.app.ws_manager.broadcast(guild_id, full_data)
 
@@ -217,7 +229,7 @@ class SubmissionsCog(commands.Cog, name="Submissions"):
                     queue_count = await database.get_submission_queue_count(message.guild.id, submission_type)
                     await message.channel.send(
                     f"✅ **{message.author.mention}**, your track has been submitted! You are currently position **#{queue_count}** in the queue.",
-                    delete_after=10  # Deletes the message after 10 seconds
+                    delete_after=10
                     )       
 
                     await self._update_panel_after_submission(message.guild)
@@ -233,13 +245,17 @@ class SubmissionsCog(commands.Cog, name="Submissions"):
                                 pass
 
                     if hasattr(self.bot, 'app') and hasattr(self.bot.app, 'ws_manager'):
-                        user_data = await self.bot.app.fetch_user_data(message.author.id)
-                        await self.bot.app.ws_manager.broadcast(message.guild.id, {
-                            "type": "new_submission",
-                            "username": user_data['name'],
-                            "avatar_url": user_data['avatar_url']
-                        })
-                        await self._broadcast_full_update(message.guild.id)
+                        # Need to check for fetch_user_data on app
+                        if hasattr(self.bot.app, 'fetch_user_data'):
+                            user_data = await self.bot.app.fetch_user_data(message.author.id)
+                            await self.bot.app.ws_manager.broadcast(message.guild.id, {
+                                "type": "new_submission",
+                                "username": user_data['name'],
+                                "avatar_url": user_data['avatar_url']
+                            })
+                            await self._broadcast_full_update(message.guild.id)
+                        else:
+                            log.warning("Cannot broadcast new submission, 'fetch_user_data' not on app.")
 
                     break
     

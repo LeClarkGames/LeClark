@@ -84,6 +84,25 @@ async def initialize_database():
             except aiosqlite.OperationalError as e:
                 log.error(f"Failed to run schema v2 migration. Columns might exist. Error: {e}")
 
+        if current_version < 3:
+            log.info("Running schema migration v3: Adding role_giver columns...")
+            try:
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN role_giver_channel_id INTEGER")
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN role_giver_role_ids TEXT")
+                await cursor.execute("PRAGMA user_version = 3")
+                current_version = 3
+            except aiosqlite.OperationalError as e:
+                log.error(f"Failed to run schema v3 migration. Columns might exist. Error: {e}")
+
+        if current_version < 4:
+            log.info("Running schema migration v4: Adding role_giver_message_id...")
+            try:
+                await cursor.execute("ALTER TABLE guild_settings ADD COLUMN role_giver_message_id INTEGER")
+                await cursor.execute("PRAGMA user_version = 4")
+                current_version = 4
+            except aiosqlite.OperationalError as e:
+                log.error(f"Failed to run schema v4 migration. Column might exist. Error: {e}")
+
     await conn.commit()
     log.info(f"Database tables initialized/updated successfully. Now at schema v{current_version}.")
 

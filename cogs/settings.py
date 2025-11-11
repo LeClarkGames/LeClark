@@ -7,7 +7,6 @@ import database
 import config
 import utils
 
-# --- Reusable Dropdown Components ---
 class ChannelSelect(discord.ui.ChannelSelect):
     def __init__(self, setting_name: str, placeholder: str, parent_view: discord.ui.View, channel_types: List[discord.ChannelType]):
         super().__init__(placeholder=placeholder, min_values=1, max_values=1, channel_types=channel_types)
@@ -75,7 +74,6 @@ class RoleManagementSelect(discord.ui.RoleSelect):
         await database.update_setting(interaction.guild.id, setting_name, ",".join(role_ids))
         await self.parent_view.refresh_and_show(interaction, edit_original=True)
 
-# --- Base View & Back Button ---
 class BaseSettingsView(discord.ui.View):
     def __init__(self, bot: commands.Bot, parent_view: discord.ui.View = None):
         super().__init__(timeout=300)
@@ -97,6 +95,8 @@ class BaseSettingsView(discord.ui.View):
              embed = await target_view.get_rewards_embed(interaction.guild)
         elif isinstance(target_view, WarningSettingsView):
              embed = await target_view.get_warnings_embed(interaction.guild)
+        elif isinstance(target_view, RoleGiverSettingsView):
+             embed = await target_view.get_role_giver_embed(interaction.guild)
 
         try:
             if interaction.response.is_done():
@@ -117,6 +117,79 @@ class BaseSettingsView(discord.ui.View):
         async def callback(self, interaction: discord.Interaction):
             embed = await self.view.parent_view.get_settings_embed(interaction.guild)
             await interaction.response.edit_message(content=None, embed=embed, view=self.view.parent_view)
+
+class RoleGiverSettingsView(BaseSettingsView):
+    def __init__(self, bot: commands.Bot, parent_view: 'SettingsMainView'):
+        super().__init__(bot, parent_view)
+        self.message: Optional[discord.Message] = None
+
+    async def get_role_giver_embed(self, guild: discord.Guild):
+        settings = await database.get_all_settings(guild.id)
+        channel_id = settings.get('role_giver_channel_id')
+        roles_str = settings.get('role_giver_role_ids') or ''
+        role_ids = [r for r in roles_str.split(',') if r]
+        
+        embed = discord.Embed(title="✨ Role Giver Settings", description="Configure the self-service role panel.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
+        embed.add_field(name="Panel Channel", value=f"<#{channel_id}>" if channel_id else "Not Set", inline=False)
+        
+        if not role_ids:
+            embed.add_field(name="Configured Roles", value="*No roles configured.*", inline=False)
+        else:
+            role_mentions = [f"<@&{r_id}>" for r_id in role_ids]
+            embed.add_field(name="Configured Roles (Max 25)", value="\n".join(role_mentions), inline=False)
+        return embed
+
+    @discord.ui.button(label="Set Panel Channel", style=discord.ButtonStyle.secondary, row=0)
+    async def set_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = discord.ui.View(); view.add_item(ChannelSelect("role_giver_channel_id", "Set Role Giver Channel", self.parent_view, [discord.ChannelType.text]))
+        await interaction.response.send_message("Select the channel for the role panel:", view=view, ephemeral=True)
+
+    @discord.ui.button(label="Add Role", style=discord.ButtonStyle.success, row=1)
+    async def add_role(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = discord.ui.View(); view.add_item(RoleGiverRoleSelect("add", self.parent_view))
+        await interaction.response.send_message("Select a role to ADD to the panel:", view=view, ephemeral=True)
+
+    @discord.ui.button(label="Remove Role", style=discord.ButtonStyle.danger, row=1)
+    async def remove_role(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = discord.ui.View(); view.add_item(RoleGiverRoleSelect("remove", self.parent_view))
+        await interaction.response.send_message("Select a role to REMOVE from the panel:", view=view, ephemeral=True)
+
+class RoleGiverRoleSelect(discord.ui.RoleSelect):
+    def __init__(self, action: str, parent_view: discord.ui.View):
+        super().__init__(placeholder=f"Select a role to {action}...")
+        self.action = action
+        self.parent_view = parent_view
+
+    async def callback(self, interaction: discord.Interaction):
+        role = self.values[0]
+        
+        if role.is_bot_managed() or role.is_premium_subscriber() or role.is_integration() or role.is_default():
+            return await interaction.response.send_message(f"❌ I cannot assign this role as it's managed by Discord.", ephemeral=True)
+        if role >= interaction.guild.me.top_role:
+            return await interaction.response.send_message(f"❌ I cannot manage {role.mention} as it is higher than my own role.", ephemeral=True)
+
+        setting_name = "role_giver_role_ids"
+        roles_str = await database.get_setting(interaction.guild.id, setting_name) or ""
+        role_ids = [r for r in roles_str.split(',') if r]
+
+        if self.action == "add":
+            if str(role.id) not in role_ids:
+                if len(role_ids) >= 25:
+                    return await interaction.response.send_message("❌ You can only add a maximum of 25 roles.", ephemeral=True)
+                role_ids.append(str(role.id))
+                await interaction.response.send_message(f"✅ {role.mention} added to the role panel.", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"⚠️ {role.mention} is already on the panel.", ephemeral=True)
+        
+        elif self.action == "remove":
+            if str(role.id) in role_ids:
+                role_ids.remove(str(role.id))
+                await interaction.response.send_message(f"✅ {role.mention} removed from the role panel.", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"⚠️ {role.mention} is not on the panel.", ephemeral=True)
+        
+        await database.update_setting(interaction.guild.id, setting_name, ",".join(role_ids))
+        await self.parent_view.refresh_and_show(interaction, edit_original=True)
 
 class SettingsMainView(BaseSettingsView):
     @discord.ui.button(label="Channels", style=discord.ButtonStyle.secondary, emoji="📺", row=0)
@@ -139,6 +212,11 @@ class SettingsMainView(BaseSettingsView):
         embed = await view.get_embed(interaction.guild)
         await interaction.response.edit_message(embed=embed, view=view)
 
+    @discord.ui.button(label="Role Giver", style=discord.ButtonStyle.secondary, emoji="✨", row=0)
+    async def role_giver_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = RoleGiverSettingsView(self.bot, self)
+        embed = await view.get_role_giver_embed(interaction.guild)
+        await interaction.response.edit_message(content="Configure the self-service role panel.", embed=embed, view=view)
 
 class ChannelSettingsView(BaseSettingsView):
     def __init__(self, bot: commands.Bot, parent_view: SettingsMainView):
@@ -466,6 +544,12 @@ class SettingsMainView(BaseSettingsView):
     async def channel_settings(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.edit_message(content="Configure general bot channels.", view=ChannelSettingsView(self.bot, self))
     @discord.ui.button(label="Roles", style=discord.ButtonStyle.secondary, emoji="🛡️", row=0)
     async def role_settings(self, interaction: discord.Interaction, button: discord.ui.Button): await interaction.response.edit_message(content="Manage Bot Admin/Moderator roles.", view=RoleManagementView(self.bot, self))
+    @discord.ui.button(label="Role Giver", style=discord.ButtonStyle.secondary, emoji="✨", row=0)
+    async def role_giver_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = RoleGiverSettingsView(self.bot, self)
+        embed = await view.get_role_giver_embed(interaction.guild)
+        await interaction.response.edit_message(content="Configure the self-service role panel.", embed=embed, view=view)
+    
     @discord.ui.button(label="Verification", style=discord.ButtonStyle.secondary, emoji="✅", row=1)
     async def verification_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = VerificationSettingsView(self.bot, self)
@@ -528,7 +612,6 @@ class SettingsCog(commands.Cog):
     async def panel_link(self, interaction: discord.Interaction):
         """Sends an ephemeral link to the web panel."""
         
-        # We get the APP_BASE_URL from your config.py
         link = f"{config.APP_BASE_URL}/panel/{interaction.guild.id}"
         
         embed = discord.Embed(

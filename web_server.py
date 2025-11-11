@@ -498,6 +498,12 @@ async def api_run_setup(guild_id: int):
         cog = bot.get_cog("Submissions")
         if not channel_id: return jsonify({"error": "Review channel not set in bot settings."}), 400
         if not cog: return jsonify({"error": "Submissions cog not found."}), 500
+
+    elif setup_type == 'role_giver':
+        channel_id = await database.get_setting(guild.id, 'role_giver_channel_id')
+        cog = bot.get_cog("Role Giver")
+        if not channel_id: return jsonify({"error": "Role Giver channel not set in bot settings."}), 400
+        if not cog: return jsonify({"error": "Role Giver cog not found."}), 500
         
     else:
         return jsonify({"error": "Invalid setup type."}), 400

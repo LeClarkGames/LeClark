@@ -204,6 +204,16 @@ class VerificationCog(commands.Cog, name="Verification"):
     def cog_unload(self):
         self.check_verifications.cancel()
 
+    async def get_panel_message(self, guild: discord.Guild) -> discord.Message | None:
+        """Gets the panel message from the database."""
+        panel_id = await database.get_setting(guild.id, 'verification_message_id')
+        channel_id = await database.get_setting(guild.id, 'verification_channel_id')
+        if not panel_id or not channel_id: return None
+        try:
+            channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
+            if channel: return await channel.fetch_message(panel_id)
+        except (discord.NotFound, discord.Forbidden): return None
+
     @tasks.loop(seconds=15)
     async def check_verifications(self):
         completed_users = await database.get_completed_verifications()
@@ -298,10 +308,17 @@ class VerificationCog(commands.Cog, name="Verification"):
     async def post_panel(self, channel: discord.TextChannel):
         """Posts the verification panel to the specified channel."""
         try:
+            if old_panel := await self.get_panel_message(channel.guild):
+                try: await old_panel.delete()
+                except (discord.Forbidden, discord.NotFound): pass
+
             embed = discord.Embed(title="Server Verification", description="To gain access to the server, click the button below and complete the required action.", color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
             view = VerificationButton(self.bot)
-            await channel.send(embed=embed, view=view)
+
+            panel_message = await channel.send(embed=embed, view=view)
+            await database.update_setting(channel.guild.id, 'verification_message_id', panel_message.id)
             return True, f"Verification message sent to {channel.mention}!"
+        
         except discord.Forbidden:
             return False, f"Bot lacks permission to send messages in {channel.mention}."
         except Exception as e:

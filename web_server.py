@@ -191,13 +191,26 @@ async def panel_home(guild_id: int):
     user_info = await fetch_user_data(int(session.get('user_id')))
     access_level = await get_user_access_level(guild, int(session.get('user_id')))
 
-    # Fetch data for dashboard cards
     last_member_joined = sorted(guild.members, key=lambda m: m.joined_at, reverse=True)[0]
     online_members = sum(1 for m in guild.members if m.status != discord.Status.offline)
     
     excluded_ids = set(config.BOT_CONFIG.get("MILESTONE_EXCLUDED_IDS", []))
     total_bots = sum(1 for m in guild.members if m.bot)
     true_member_count = guild.member_count - total_bots - len(excluded_ids)
+
+    raw_leaderboard = await database.get_leaderboard(guild_id, limit=10)
+    xp_leaderboard = []
+    if raw_leaderboard:
+        user_ids = [user_id for user_id, xp in raw_leaderboard]
+        user_data_task = asyncio.gather(*[fetch_user_data(uid) for uid in user_ids])
+        fetched_users = await user_data_task
+        
+        for i, (user_id, xp) in enumerate(raw_leaderboard):
+            user_info = fetched_users[i]
+            xp_leaderboard.append({
+                "name": user_info['name'],
+                "score": xp
+            })
     
     return await render_template(
         "panel_dashboard.html",
@@ -205,6 +218,7 @@ async def panel_home(guild_id: int):
         user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
         access_level=access_level,
+        xp_leaderboard=xp_leaderboard,
         csrf_token=session.get('csrf_token')
     )
 
@@ -245,9 +259,9 @@ async def panel_mod_menu(guild_id: int):
         if member.bot: continue
         member_role_ids = {role.id for role in member.roles}
         if any(role_id in member_role_ids for role_id in admin_role_ids):
-            admin_members.append({"name": member.display_name, "avatar_url": member.display_avatar.url})
+            admin_members.append({"id": member.id, "name": member.display_name, "avatar_url": member.display_avatar.url})
         elif any(role_id in member_role_ids for role_id in mod_role_ids):
-            mod_members.append({"name": member.display_name, "avatar_url": member.display_avatar.url})
+            mod_members.append({"id": member.id, "name": member.display_name, "avatar_url": member.display_avatar.url})
 
     return await render_template(
         "panel_mod_menu.html",
@@ -402,12 +416,6 @@ async def xp_leaderboard(guild_id: int):
     }
     
     return rendered_template
-
-@app.route('/widget/<int:guild_id>')
-async def widget_link_page(guild_id: int):
-    token = await database.get_or_create_widget_token(guild_id)
-    widget_url_base = f"{APP_BASE_URL}/widget/view/{token}"
-    return await render_template("widget_link.html", widget_url_base=widget_url_base, guild_id=guild_id)
 
 @app.route('/widget/view/<token>')
 async def view_widget(token: str):

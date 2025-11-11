@@ -16,6 +16,9 @@
         .leaderboard-content-wrapper .stat-list { flex-grow: 1; }
         .leaderboard-content-wrapper .button { flex-shrink: 0; }
     </style>
+</head>
+<body class="body-fade-in">
+
     <script>
         (function() {
             const body = document.body;
@@ -25,12 +28,11 @@
             }
         })();
     </script>
-</head>
-<body class="body-fade-in">
+
     <header class="top-bar">
         <div class="logo">
-            <img src="/static/logo.png" alt="Logo" class="logo-light-mode">
-            <img src="/static/logo-white.png" alt="Logo" class="logo-dark-mode">
+            <img src="/static/Logo-DayMode.png" alt="Logo" class="logo-light-mode">
+            <img src="/static/Logo-NightMode.png" alt="Logo" class="logo-dark-mode">
         </div>
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">

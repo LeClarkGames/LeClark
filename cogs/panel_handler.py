@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import logging
 import config
 import database
+import json
 
 log = logging.getLogger(__name__)
 
@@ -63,19 +64,71 @@ class PanelHandlerCog(commands.Cog, name="Panel Handler"):
                 try:
                     channel_id = int(task.get('channel_id'))
                     channel = guild.get_channel(channel_id)
-                    if channel:
-                        if task.get('is_embed') == 'true':
-                            parts = task.get('content').split('|', 1)
-                            title = parts[0]
-                            desc = parts[1] if len(parts) > 1 else " "
-                            embed = discord.Embed(title=title, description=desc, color=config.BOT_CONFIG["EMBED_COLORS"]["INFO"])
-                            await channel.send(embed=embed)
-                        else:
-                            await channel.send(task.get('content'))
-                    else:
+                    if not channel:
                         log.error(f"Could not find channel {channel_id} to send message.")
-                except (discord.Forbidden, ValueError):
-                    log.error(f"Missing permissions or invalid channel ID for send_message.")
+                        self.bot.action_queue.task_done()
+                        return
+
+                    if task.get('is_embed'):
+                        
+                        embed_data = json.loads(task.get('content'))
+                        
+                        embed = discord.Embed()
+
+                        if embed_data.get('title'):
+                            embed.title = embed_data['title']
+                        if embed_data.get('description'):
+                            embed.description = embed_data['description']
+                        if embed_data.get('url'):
+                            embed.url = embed_data['url']
+                        
+                        if embed_data.get('color'):
+                            try:
+                                color_value = embed_data['color'].replace('#', '')
+                                embed.color = discord.Color(int(color_value, 16))
+                            except ValueError:
+                                log.warning(f"Invalid color code received: {embed_data['color']}")
+                                embed.color = config.BOT_CONFIG["EMBED_COLORS"]["INFO"]
+                        else:
+                             embed.color = config.BOT_CONFIG["EMBED_COLORS"]["INFO"]
+
+                        if embed_data.get('author_name'):
+                            embed.set_author(
+                                name=embed_data['author_name'],
+                                url=embed_data.get('author_url'),
+                                icon_url=embed_data.get('author_icon_url')
+                            )
+
+                        if embed_data.get('footer_text'):
+                            embed.set_footer(
+                                text=embed_data['footer_text'],
+                                icon_url=embed_data.get('footer_icon_url')
+                            )
+                        
+                        if embed_data.get('timestamp') == 'true':
+                            embed.timestamp = discord.utils.utcnow()
+
+                        if embed_data.get('image_url'):
+                            embed.set_image(url=embed_data['image_url'])
+                        if embed_data.get('thumbnail_url'):
+                            embed.set_thumbnail(url=embed_data['thumbnail_url'])
+                        
+                        if embed_data.get('fields'):
+                            for field in embed_data['fields']:
+                                if field.get('name') and field.get('value'):
+                                    embed.add_field(
+                                        name=field['name'],
+                                        value=field['value'],
+                                        inline=field.get('inline', False)
+                                    )
+                        
+                        await channel.send(embed=embed)
+                    
+                    else:
+                        await channel.send(task.get('content'))
+
+                except (discord.Forbidden, ValueError, TypeError) as e:
+                    log.error(f"Error sending message: {e}", exc_info=True)
                 
             elif action == 'manage_staff':
                 try:

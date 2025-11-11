@@ -6,18 +6,33 @@
     <title>Staff Panel Login</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/icon.png">
+    <style>
+        body {
+            padding-top: 0;
+            padding-bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .theme-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+        }
+        .login-logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .card .logo img {
+            height: auto;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-    <div class="container" style="max-width: 520px;">
-        <div class="card">
-            {% if guild_icon_url %}
-            <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon">
-            {% endif %}
-            <h1>{{ guild_name }}</h1>
-            <p class="subtitle">Staff Control Panel</p>
-            <a href="{{ url_for('login') }}" class="button" style="margin-top: 1.5rem; background-color: #5865F2; border: none;">Login with Discord</a>
-        </div>
-    </div>
     <script>
         (function() {
             const body = document.body;
@@ -26,6 +41,51 @@
                 body.classList.add('light-mode');
             }
         })();
+    </script>
+
+    <div class="theme-switcher">
+        <button id="theme-toggle-btn" class="icon-button">☀️</button>
+    </div>
+
+    <div class="container" style="max-width: 520px;">
+        <div class="card">
+            
+            <div class="logo login-logo">
+                <img src="/static/Logo-DayMode.png" alt="Logo" class="logo-light-mode">
+                <img src="/static/Logo-NightMode.png" alt="Logo" class="logo-dark-mode">
+            </div>
+            
+            {% if guild_icon_url %}
+            <img src="{{ guild_icon_url }}" alt="Server Icon" class="guild-icon">
+            {% endif %}
+            <h1>{{ guild_name }}</h1>
+            <p class="subtitle">Staff Control Panel</p>
+            <a href="{{ url_for('login') }}" class="button" style="margin-top: 1.5rem; background-color: #5865F2; border: none;">Login with Discord</a>
+        </div>
+    </div>
+
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const body = document.body;
+        
+        // Set initial button text based on theme
+        if (body.classList.contains('light-mode')) {
+            themeToggleBtn.textContent = '🌙';
+        } else {
+            themeToggleBtn.textContent = '☀️';
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            
+            if (body.classList.contains('light-mode')) {
+                themeToggleBtn.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeToggleBtn.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
     </script>
 </body>
 </html>

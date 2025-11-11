@@ -33,7 +33,17 @@
         .search-results { border: 1px solid var(--border-color); border-radius: 4px; margin-top: 0.5rem; max-height: 150px; overflow-y: auto; }
         .search-result-item { padding: 8px 12px; cursor: pointer; text-align: left; }
         .search-result-item:hover { background-color: var(--accent-color); }
+        .embed-builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .embed-builder-group { grid-column: span 2; border: 1px solid var(--border-color); border-radius: 4px; padding: 1rem; margin-bottom: 1rem; }
+        .embed-builder-group h4 { margin-top: 0; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        .embed-field-group { grid-column: span 2; border: 1px dashed var(--border-color); border-radius: 4px; padding: 1rem; margin-top: 1rem; position: relative; }
+        .embed-field-group .form-group { margin-top: 1rem; }
+        .embed-field-inline-label { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+        .embed-field-remove-btn { position: absolute; top: 10px; right: 10px; background: var(--accent-color); border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 24px; text-align: center; }
     </style>
+</head>
+<body class="body-fade-in">
+    
     <script>
         (function() {
             const body = document.body;
@@ -43,12 +53,11 @@
             }
         })();
     </script>
-</head>
-<body class="body-fade-in">
+
     <header class="top-bar">
         <div class="logo">
-            <img src="/static/logo.png" alt="Logo" class="logo-light-mode">
-            <img src="/static/logo-white.png" alt="Logo" class="logo-dark-mode">
+            <img src="/static/Logo-DayMode.png" alt="Logo" class="logo-light-mode">
+            <img src="/static/Logo-NightMode.png" alt="Logo" class="logo-dark-mode">
         </div>
         <div class="user-profile">
             <img src="{{ user_avatar_url }}" alt="User Avatar">
@@ -66,7 +75,7 @@
         </div>
     </header>
 
-    <main class="main-content">
+    <main class="main-content" style="box-sizing: border-box;">
         <h2>Moderation Menu</h2>
         
         <div class="form-grid">
@@ -205,14 +214,87 @@
                         <option value="">Loading channels...</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-top: 1rem;">
-                    <label for="embed_title">Embed Title</label>
-                    <input type="text" id="embed_title" class="input">
+
+                <div class="embed-builder-group">
+                    <h4>Author</h4>
+                    <div class="embed-builder-grid">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label for="embed_author_name">Author</label>
+                            <input type="text" id="embed_author_name" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_author_url">Author URL</label>
+                            <input type="text" id="embed_author_url" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_author_icon_url">Author Icon URL</label>
+                            <input type="text" id="embed_author_icon_url" class="input">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group" style="margin-top: 1rem;">
-                    <label for="embed_description">Embed Description</label>
-                    <textarea id="embed_description" class="input" rows="4" required></textarea>
+
+                <div class="embed-builder-group">
+                    <h4>Body</h4>
+                    <div class="embed-builder-grid">
+                        <div class="form-group">
+                            <label for="embed_title">Title</label>
+                            <input type="text" id="embed_title" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_url">Title URL</label>
+                            <input type="text" id="embed_url" class="input">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label for="embed_description">Description</label>
+                            <textarea id="embed_description" class="input" rows="5"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_color">Color</label>
+                            <input type="color" id="embed_color" class="input" value="#5865F2" style="padding: 5px; height: 40px;">
+                        </div>
+                    </div>
                 </div>
+
+                <div class="embed-builder-group">
+                    <h4>Images</h4>
+                    <div class="embed-builder-grid">
+                        <div class="form-group">
+                            <label for="embed_image_url">Image URL</label>
+                            <input type="text" id="embed_image_url" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_thumbnail_url">Thumbnail URL</label>
+                            <input type="text" id="embed_thumbnail_url" class="input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="embed-builder-group">
+                    <h4>Footer</h4>
+                    <div class="embed-builder-grid">
+                        <div class="form-group">
+                            <label for="embed_footer_text">Footer Text</label>
+                            <input type="text" id="embed_footer_text" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label for="embed_footer_icon_url">Footer Icon URL</label>
+                            <input type="text" id="embed_footer_icon_url" class="input">
+                        </div>
+                    </div>
+                    <label class="embed-field-inline-label">
+                        <input type="checkbox" id="embed_timestamp">
+                        <span>Add Timestamp</span>
+                    </label>
+                </div>
+
+                <div class="embed-builder-group">
+                    <h4>Fields (<span id="embed-field-count">0</span> / 25)</h4>
+                    <div id="embed-fields-container">
+                        </div>
+                    <button type="button" id="add-embed-field-btn" class="button" style="margin-top: 1rem; width: auto; background-color: #57F287; border-color: #57F287;">Add Field</button>
+                    <button type="button" id="clear-embed-fields-btn" class="button" style="margin-top: 1rem; width: auto; background-color: var(--accent-color);">Clear Fields</button>
+                </div>
+
                 <button type="submit" class="button" style="margin-top: 1.5rem;">Send Embed</button>
             </form>
             <div id="send-response" style="margin-top: 1rem;"></div>
@@ -457,11 +539,7 @@
             e.preventDefault();
             const formData = new FormData();
             const type = isEmbed ? 'embed' : 'regular';
-            
             const channelId = document.getElementById(`${type}_channel_select`).value;
-            const content = isEmbed 
-                ? `${document.getElementById('embed_title').value}|${document.getElementById('embed_description').value}`
-                : document.getElementById('regular_message_content').value;
 
             if (!channelId) {
                 showResponse('send-response', 'Please select a channel.', true);
@@ -469,8 +547,42 @@
             }
 
             formData.append('channel_id', channelId);
-            formData.append('message_content', content);
             formData.append('is_embed', isEmbed);
+
+            let content;
+            if (isEmbed) {
+                const embedData = {
+                    author_name: document.getElementById('embed_author_name').value,
+                    author_url: document.getElementById('embed_author_url').value,
+                    author_icon_url: document.getElementById('embed_author_icon_url').value,
+                    title: document.getElementById('embed_title').value,
+                    url: document.getElementById('embed_url').value,
+                    description: document.getElementById('embed_description').value,
+                    color: document.getElementById('embed_color').value,
+                    image_url: document.getElementById('embed_image_url').value,
+                    thumbnail_url: document.getElementById('embed_thumbnail_url').value,
+                    footer_text: document.getElementById('embed_footer_text').value,
+                    footer_icon_url: document.getElementById('embed_footer_icon_url').value,
+                    timestamp: document.getElementById('embed_timestamp').checked ? 'true' : 'false',
+                    fields: []
+                };
+
+                document.querySelectorAll('.embed-field-group').forEach(fieldGroup => {
+                    const name = fieldGroup.querySelector('input[placeholder="Name"]').value;
+                    const value = fieldGroup.querySelector('textarea[placeholder="Value"]').value;
+                    const inline = fieldGroup.querySelector('input[type="checkbox"]').checked;
+                    
+                    if (name && value) {
+                        embedData.fields.push({ name, value, inline });
+                    }
+                });
+
+                content = JSON.stringify(embedData);
+            } else {
+                content = document.getElementById('regular_message_content').value;
+            }
+
+            formData.append('message_content', content);
 
             const response = await apiPost(`/api/v1/actions/send-message/${guildId}`, formData);
             const result = await response.json();
@@ -480,6 +592,56 @@
         
         document.getElementById('regular-message-tab').addEventListener('submit', (e) => handleSendMessage(e, false));
         document.getElementById('embed-message-tab').addEventListener('submit', (e) => handleSendMessage(e, true));
+
+        let fieldCount = 0;
+        const fieldContainer = document.getElementById('embed-fields-container');
+        const fieldCountEl = document.getElementById('embed-field-count');
+
+        function updateFieldCount() {
+            fieldCount = fieldContainer.children.length;
+            fieldCountEl.textContent = fieldCount;
+        }
+
+        document.getElementById('add-embed-field-btn').addEventListener('click', () => {
+            if (fieldCount >= 25) {
+                alert("You can only add up to 25 fields.");
+                return;
+            }
+            
+            const fieldId = Date.now();
+            const newField = document.createElement('div');
+            newField.className = 'embed-field-group';
+            newField.innerHTML = `
+                <button type="button" class="embed-field-remove-btn">&times;</button>
+                <div class="embed-builder-grid">
+                    <div class="form-group">
+                        <label for="field-name-${fieldId}">Name (1 / 256)</label>
+                        <input type="text" id="field-name-${fieldId}" class="input" placeholder="Name" maxlength="256">
+                    </div>
+                    <div class="form-group">
+                        <label for="field-value-${fieldId}">Value (1 / 1024)</label>
+                        <textarea id="field-value-${fieldId}" class="input" placeholder="Value" rows="3" maxlength="1024"></textarea>
+                    </div>
+                </div>
+                <label class="embed-field-inline-label">
+                    <input type="checkbox" id="field-inline-${fieldId}">
+                    <span>Inline</span>
+                </label>
+            `;
+            
+            newField.querySelector('.embed-field-remove-btn').addEventListener('click', (e) => {
+                e.target.closest('.embed-field-group').remove();
+                updateFieldCount();
+            });
+
+            fieldContainer.appendChild(newField);
+            updateFieldCount();
+        });
+
+        document.getElementById('clear-embed-fields-btn').addEventListener('click', () => {
+            fieldContainer.innerHTML = '';
+            updateFieldCount();
+        });
 
         document.querySelectorAll('.setup-btn').forEach(button => {
             button.addEventListener('click', async () => {

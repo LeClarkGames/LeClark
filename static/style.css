@@ -66,6 +66,13 @@ body.light-mode {
     display: block;
 }
 
+.login-logo {
+    width: 200px;
+    height: auto;
+    margin-bottom: 1rem;
+    display: block;
+}
+
 .container {
     width: 100%;
     max-width: 800px;
@@ -92,22 +99,26 @@ body.light-mode {
 }
 
 .top-bar .logo img {
-    height: 40px;
+    height: 50px;
     width: auto;
     display: block;
 }
 
-.logo-light-mode {
+.top-bar .logo .logo-light-mode,
+.login-logo .logo-light-mode {
     display: none;
 }
-.logo-dark-mode {
+.top-bar .logo .logo-dark-mode,
+.login-logo .logo-dark-mode {
     display: block;
 }
 
-body.light-mode .logo-light-mode {
+body.light-mode .top-bar .logo .logo-light-mode,
+body.light-mode .login-logo .logo-light-mode {
     display: block;
 }
-body.light-mode .logo-dark-mode {
+body.light-mode .top-bar .logo .logo-dark-mode,
+body.light-mode .login-logo .logo-dark-mode {
     display: none;
 }
 

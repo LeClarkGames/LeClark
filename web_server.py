@@ -156,10 +156,6 @@ async def get_full_widget_data(guild_id: int) -> dict:
         }
     }
 
-# --- WEB ROUTES ---
-
-# --- Staff Panel Authentication Routes ---
-
 @app.route('/panel/login/<int:guild_id>')
 async def panel_login_page(guild_id: int):
     """Renders the login page for a specific guild."""
@@ -189,7 +185,7 @@ async def panel_home(guild_id: int):
     """Renders the main dashboard page."""
     guild = app.bot_instance.get_guild(guild_id)
     user_id = int(session.get('user_id'))
-    user_info = await fetch_user_data(user_id)
+    session_user_info = await fetch_user_data(user_id)
     access_level = await get_user_access_level(guild, user_id)
     is_dev = await utils.is_developer(user_id)
 
@@ -208,22 +204,23 @@ async def panel_home(guild_id: int):
         fetched_users = await user_data_task
         
         for i, (user_id, xp) in enumerate(raw_leaderboard):
-            user_info = fetched_users[i]
+            leaderboard_user_info = fetched_users[i]
             xp_leaderboard.append({
-                "name": user_info['name'],
+                "name": leaderboard_user_info['name'],
                 "score": xp
             })
     
     return await render_template(
         "panel_dashboard.html",
         guild_id=guild_id, guild_name=guild.name, guild_icon_url=guild.icon.url if guild.icon else None,
-        user_name=user_info['name'], user_avatar_url=user_info['avatar_url'],
+        user_name=session_user_info['name'], user_avatar_url=session_user_info['avatar_url'],
         last_member=last_member_joined.display_name, online_count=online_members, member_count=true_member_count,
         access_level=access_level,
         is_developer=is_dev,
         xp_leaderboard=xp_leaderboard,
         csrf_token=session.get('csrf_token')
     )
+
 @app.route('/panel/<int:guild_id>/widgets')
 @login_required
 async def panel_widgets(guild_id: int):

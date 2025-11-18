@@ -187,7 +187,7 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const token = "{{ token }}";
-        const wsProtocol = window.location.protocol === 'https:?' ? 'wss:' : 'ws:';
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws?token=${token}`;
         let socket;
         function connect() {
@@ -214,6 +214,29 @@
             document.getElementById('regular-queue').textContent = data.queue;
             document.getElementById('regular-reviewing').textContent = data.reviewing || 'None';
         }
+
+        let notificationTimeout;
+        function showNotification(data) {
+            const notification = document.getElementById('notification');
+            if (!notification) return;
+
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+
+            notification.innerHTML = `
+                <img src="${data.avatar_url}" alt="Avatar">
+                <span><strong>${data.username}</strong> just submitted a track!</span>
+            `;
+            
+            notification.classList.add('show');
+
+            notificationTimeout = setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000); 
+        }
+
+        connect();
     </script>
 </body>
 </html>

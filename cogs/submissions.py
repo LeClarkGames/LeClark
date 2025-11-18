@@ -56,6 +56,9 @@ class ReviewItemView(discord.ui.View):
         self.cog.regular_session_reviewed_count[interaction.guild.id] += 1
 
         await database.update_submission_status(self.submission_id, "reviewed", interaction.user.id)
+
+        self.stop()
+
         await interaction.message.delete()
         await interaction.response.send_message("✅ Track marked as reviewed.", ephemeral=True)
         
